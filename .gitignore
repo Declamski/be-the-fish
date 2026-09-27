@@ -1,0 +1,19 @@
+# Claude instructions (not for submission)
+CLAUDE.md
+docs/
+
+# Runtime data
+data/
+imports/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
