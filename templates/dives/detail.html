@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ dive.discipline }} dive - {{ dive.started_at }}</h1>
+{% if error %}<p>{{ error }}</p>{% endif %}
+<p>Max depth: {{ dive.max_depth_m }} m</p>
+<p>Duration: {{ dive.duration_s }} s</p>
+<p>Water temp: {{ dive.water_temp_c }}</p>
+<p>Notes: {{ dive.notes }}</p>
+
+{% if descents %}
+<h2>Descents</h2>
+<ul>
+{% for d in descents %}
+    <li>{{ d.depth_m }} m for {{ d.duration_s }} s</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+{% if dive.discipline == "spearfishing" %}
+<h2>Catches</h2>
+<ul>
+{% for c in catches %}
+    <li>{{ c.species }} ({{ c.weight_kg }} kg)</li>
+{% else %}
+    <li>No catches logged yet</li>
+{% endfor %}
+</ul>
+<form method="post" action="/dives/{{ dive.id }}/catches">
+    <label>Species <input type="text" name="species" required></label><br>
+    <label>Weight (kg) <input type="number" step="0.1" name="weight_kg"></label><br>
+    <button type="submit">Add catch</button>
+</form>
+{% endif %}
+{% endblock %}

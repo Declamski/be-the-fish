@@ -1,3 +1,5 @@
+import functools
+
 import flask
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -70,6 +72,15 @@ def get_current_user(conn):
     if row is None:
         return None
     return {"id": row["id"], "email": row["email"], "name": row["name"]}
+
+
+def login_required(view_func):
+    @functools.wraps(view_func)
+    def wrapped_view(*args, **kwargs):
+        if flask.session.get("user_id") is None:
+            return flask.redirect("/login")
+        return view_func(*args, **kwargs)
+    return wrapped_view
 
 
 @bp.route("/signup", methods=["GET", "POST"])

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Log a new dive</h1>
+{% if error %}<p>{{ error }}</p>{% endif %}
+<form method="post">
+    <label>Discipline
+        <select name="discipline" required>
+            <option value="scuba">Scuba</option>
+            <option value="freedive">Freedive</option>
+            <option value="spearfishing">Spearfishing</option>
+        </select>
+    </label><br>
+    <label>Started at <input type="datetime-local" name="started_at" required></label><br>
+    <label>Site ID (optional) <input type="number" name="site_id"></label><br>
+    <label>Notes <textarea name="notes"></textarea></label><br>
+
+    <p>If scuba, fill these in now. If freedive/spearfishing, you'll add descents next.</p>
+    <label>Max depth (m) <input type="number" step="0.1" name="max_depth_m"></label><br>
+    <label>Duration (s) <input type="number" name="duration_s"></label><br>
+    <label>Water temp (&deg;C) <input type="number" step="0.1" name="water_temp_c"></label><br>
+
+    <button type="submit">Continue</button>
+</form>
+{% endblock %}

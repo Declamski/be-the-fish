@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Session in progress: {{ draft.discipline }}</h1>
+{% if error %}<p>{{ error }}</p>{% endif %}
+
+<h2>Descents so far</h2>
+<ul>
+{% for d in draft.descents %}
+    <li>{{ d.depth_m }} m for {{ d.duration_s }} s</li>
+{% else %}
+    <li>No descents added yet</li>
+{% endfor %}
+</ul>
+
+<h2>Add a descent</h2>
+<form method="post">
+    <label>Depth (m) <input type="number" step="0.1" name="depth_m" required></label><br>
+    <label>Duration (s) <input type="number" name="duration_s" required></label><br>
+    <button type="submit">Add descent</button>
+</form>
+
+<form method="post" action="/dives/new/finish">
+    <button type="submit">Finish session</button>
+</form>
+{% endblock %}

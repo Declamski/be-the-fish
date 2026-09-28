@@ -2,6 +2,7 @@ import sqlite3
 import os
 
 import users
+import dives
 
 
 def get_connection(data_dir):
@@ -15,4 +16,5 @@ def init_db(data_dir):
     os.makedirs(data_dir, exist_ok=True)
     conn = get_connection(data_dir)
     users.init_db(conn)
+    dives.init_db(conn)
     conn.close()
