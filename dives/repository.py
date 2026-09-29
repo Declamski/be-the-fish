@@ -70,3 +70,9 @@ def list_catches(conn, dive_id):
     return conn.execute(
         "SELECT * FROM catches WHERE dive_id = ? ORDER BY id", (dive_id,)
     ).fetchall()
+
+
+def get_dive_by_external_id(conn, external_id):
+    return conn.execute(
+        "SELECT * FROM dives WHERE external_id = ?", (external_id,)
+    ).fetchone()

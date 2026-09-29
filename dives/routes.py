@@ -1,7 +1,9 @@
+import io
+
 import flask
 
 import users
-from . import service
+from . import importer, service
 
 bp = flask.Blueprint("dives", __name__, url_prefix="/dives")
 
@@ -99,6 +101,43 @@ def finish_dive():
 
     flask.session.pop("draft_dive", None)
     return flask.redirect(f"/dives/{dive_id}")
+
+
+@bp.route("/import", methods=["GET", "POST"])
+@users.login_required
+def import_dives():
+    if flask.request.method == "GET":
+        return flask.render_template("dives/import.html")
+
+    upload = flask.request.files.get("file")
+    if upload is None or not upload.filename:
+        return flask.render_template("dives/import.html", error="Choose a file first"), 400
+
+    filename = upload.filename.lower()
+    if filename.endswith(".fit"):
+        return flask.render_template("dives/import.html", error=(
+            "FIT files are not read directly. Open the .fit file in Subsurface, "
+            "then export it as CSV and upload that."
+        )), 400
+    if not filename.endswith(".csv"):
+        return flask.render_template("dives/import.html", error="Only .csv files can be imported"), 400
+
+    discipline_override = flask.request.form.get("discipline_override") or None
+    text_stream = io.TextIOWrapper(upload.stream, encoding="utf-8", newline="")
+
+    try:
+        summary = importer.import_csv_stream(
+            get_connection(),
+            user_id=current_user_id(),
+            text_stream=text_stream,
+            discipline_override=discipline_override,
+        )
+    except ValueError as e:
+        return flask.render_template("dives/import.html", error=str(e)), 400
+    except UnicodeDecodeError:
+        return flask.render_template("dives/import.html", error="That file is not readable text"), 400
+
+    return flask.render_template("dives/import.html", summary=summary)
 
 
 @bp.route("", methods=["GET"])

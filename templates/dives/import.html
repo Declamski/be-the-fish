@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Import dives from a file</h1>
+<p><a href="/dives/new">Back to logging a dive by hand</a></p>
+
+{% if error %}<p><strong>{{ error }}</strong></p>{% endif %}
+
+{% if summary %}
+<p><strong>Import finished.</strong></p>
+<ul>
+    <li>{{ summary.imported }} dive(s) added</li>
+    <li>{{ summary.skipped_duplicate }} already in your log, skipped</li>
+    <li>{{ summary.skipped_invalid }} row(s) skipped: missing depth, duration or date</li>
+</ul>
+<p><a href="/dives">See your dives</a></p>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data">
+    <label>Subsurface CSV export <input type="file" name="file" accept=".csv" required></label><br>
+
+    <label>Discipline
+        <select name="discipline_override">
+            <option value="">Use whatever the file says</option>
+            <option value="scuba">Force all rows to scuba</option>
+            <option value="freedive">Force all rows to freedive</option>
+            <option value="spearfishing">Force all rows to spearfishing</option>
+        </select>
+    </label><br>
+    <p>Only override if the watch recorded the whole file in the wrong mode.</p>
+
+    <button type="submit">Import</button>
+</form>
+
+<h2>Getting a CSV out of your dive computer</h2>
+<ol>
+    <li>Open your <code>.fit</code> files in Subsurface (free desktop app).</li>
+    <li>File &rarr; Export &rarr; CSV summary.</li>
+    <li>Upload that file here.</li>
+</ol>
+<p>Importing the same file twice is safe: dives already in your log are skipped.</p>
+{% endblock %}

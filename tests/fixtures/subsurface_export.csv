@@ -1,0 +1,6 @@
+dive number,date,time,duration [min],sac [l/min],maxdepth [m],avgdepth [m],mode,airtemp [C],watertemp [C],location,gps,divemaster,buddy,suit,rating,visibility,notes,weight [kg],tags,
+1,2026-09-15,10:08:16,59:00,,17.73,11.12,Freedive,,31.0,Blue Hole Gozo,36.049000 14.189000,,,,,,,,
+2,2026-09-16,09:30:00,42:30,18.2,28.40,15.05,,26.0,24.5,Blue Hole Gozo,36.049000 14.189000,,diver-b,5mm,,,first stage felt cold,6.0,
+3,2026-09-16,14:02:10,35:15,,22.10,9.80,Freedive,,25.0,Blue Hole Gozo,36.049000 14.189000,,,,,,,,spearfishing
+4,2026-09-17,11:00:00,,,,,Freedive,,26.0,Blue Hole Gozo,36.049000 14.189000,,,,,,missing depth and duration,,
+1,2026-09-15,10:08:16,59:00,,17.73,11.12,Freedive,,31.0,Blue Hole Gozo,36.049000 14.189000,,,,,,,,

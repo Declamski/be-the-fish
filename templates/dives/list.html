@@ -2,7 +2,7 @@
 {% block content %}
 <h1>Your dives</h1>
 {% if error %}<p>{{ error }}</p>{% endif %}
-<p><a href="/dives/new">Log a new dive</a></p>
+<p><a href="/dives/new">Log a new dive</a> | <a href="/dives/import">Import from a file</a></p>
 <ul>
 {% for dive in dives %}
     <li><a href="/dives/{{ dive.id }}">{{ dive.started_at }} - {{ dive.discipline }} - {{ dive.max_depth_m }} m</a></li>
