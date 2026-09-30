@@ -3,6 +3,7 @@ import pytest
 from app import create_app
 from db import get_connection
 from dives import service
+from sites.service import SEED_SITES
 
 
 @pytest.fixture
@@ -135,3 +136,126 @@ def test_get_dive_detail_rejects_other_users_dive(conn):
     )
     with pytest.raises(ValueError):
         service.get_dive_detail(conn, dive_id, user_id=2)
+
+
+# --- site and conditions ---
+# The test database is seeded with SEED_SITES at startup, so site 1 exists.
+
+def make_scuba_dive(conn, user_id=1):
+    return service.create_scuba_dive(
+        conn, user_id=user_id, started_at="2026-01-01T10:00:00",
+        max_depth_m=10, duration_s=100,
+    )
+
+
+def test_create_scuba_dive_with_site_and_conditions(conn):
+    dive_id = service.create_scuba_dive(
+        conn, user_id=1, started_at="2026-01-01T10:00:00",
+        max_depth_m=10, duration_s=100, site_id=1, visibility="good", current="light",
+    )
+    detail = service.get_dive_detail(conn, dive_id, user_id=1)
+    assert detail["dive"]["visibility"] == "good"
+    assert detail["dive"]["current"] == "light"
+    assert detail["site_label"] == "Bloody Bay Wall - Little Cayman, Cayman Islands"
+
+
+def test_create_scuba_dive_rejects_unknown_site(conn):
+    with pytest.raises(ValueError):
+        service.create_scuba_dive(
+            conn, user_id=1, started_at="2026-01-01T10:00:00",
+            max_depth_m=10, duration_s=100, site_id=9999,
+        )
+
+
+def test_create_scuba_dive_rejects_unknown_visibility(conn):
+    with pytest.raises(ValueError):
+        service.create_scuba_dive(
+            conn, user_id=1, started_at="2026-01-01T10:00:00",
+            max_depth_m=10, duration_s=100, visibility="crystal",
+        )
+
+
+def test_create_scuba_dive_rejects_unknown_current(conn):
+    with pytest.raises(ValueError):
+        service.create_scuba_dive(
+            conn, user_id=1, started_at="2026-01-01T10:00:00",
+            max_depth_m=10, duration_s=100, current="raging",
+        )
+
+
+def test_dive_without_site_has_no_label(conn):
+    dive_id = make_scuba_dive(conn)
+    detail = service.get_dive_detail(conn, dive_id, user_id=1)
+    assert detail["site_label"] is None
+    assert detail["dive"]["visibility"] is None
+
+
+def test_finish_session_saves_site_and_conditions(conn):
+    draft = service.start_session_draft(
+        discipline="freedive", started_at="2026-01-01T10:00:00",
+        site_id=1, visibility="excellent", current="none",
+    )
+    draft = service.add_descent_to_draft(draft, depth_m=10, duration_s=60)
+    dive_id = service.finish_session(conn, user_id=1, draft=draft)
+
+    dive = service.get_dive_detail(conn, dive_id, user_id=1)["dive"]
+    assert dive["site_id"] == 1
+    assert dive["visibility"] == "excellent"
+    assert dive["current"] == "none"
+
+
+def test_finish_session_rejects_unknown_site(conn):
+    draft = service.start_session_draft(
+        discipline="freedive", started_at="2026-01-01T10:00:00", site_id=9999,
+    )
+    draft = service.add_descent_to_draft(draft, depth_m=10, duration_s=60)
+    with pytest.raises(ValueError):
+        service.finish_session(conn, user_id=1, draft=draft)
+
+
+def test_set_dive_site_and_conditions(conn):
+    dive_id = make_scuba_dive(conn)
+    service.set_dive_site_and_conditions(
+        conn, dive_id, user_id=1, site_id=2, visibility="poor", current="strong",
+    )
+    detail = service.get_dive_detail(conn, dive_id, user_id=1)
+    assert detail["dive"]["site_id"] == 2
+    assert detail["dive"]["visibility"] == "poor"
+    assert detail["dive"]["current"] == "strong"
+
+
+def test_set_dive_site_and_conditions_can_clear_them(conn):
+    dive_id = make_scuba_dive(conn)
+    service.set_dive_site_and_conditions(
+        conn, dive_id, user_id=1, site_id=2, visibility="poor", current="strong",
+    )
+    service.set_dive_site_and_conditions(
+        conn, dive_id, user_id=1, site_id=None, visibility=None, current=None,
+    )
+    detail = service.get_dive_detail(conn, dive_id, user_id=1)
+    assert detail["dive"]["site_id"] is None
+    assert detail["site_label"] is None
+
+
+def test_set_dive_site_and_conditions_rejects_other_users_dive(conn):
+    dive_id = make_scuba_dive(conn, user_id=1)
+    with pytest.raises(ValueError):
+        service.set_dive_site_and_conditions(
+            conn, dive_id, user_id=2, site_id=1, visibility=None, current=None,
+        )
+
+
+def test_set_dive_site_and_conditions_rejects_unknown_site(conn):
+    dive_id = make_scuba_dive(conn)
+    with pytest.raises(ValueError):
+        service.set_dive_site_and_conditions(
+            conn, dive_id, user_id=1, site_id=9999, visibility=None, current=None,
+        )
+
+
+def test_get_site_choices_lists_every_site_with_label(conn):
+    choices = service.get_site_choices(conn)
+    labels = [choice["label"] for choice in choices]
+    assert "Blue Hole - Dahab, Egypt" in labels
+    assert "Blue Hole - Gozo, Malta" in labels
+    assert len(choices) == len(SEED_SITES)

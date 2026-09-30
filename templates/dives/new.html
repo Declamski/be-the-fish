@@ -12,7 +12,7 @@
         </select>
     </label><br>
     <label>Started at <input type="datetime-local" name="started_at" required></label><br>
-    <label>Site ID (optional) <input type="number" name="site_id"></label><br>
+    {% include "dives/_site_fields.html" %}
     <label>Notes <textarea name="notes"></textarea></label><br>
 
     <p>If scuba, fill these in now. If freedive/spearfishing, you'll add descents next.</p>
@@ -22,4 +22,5 @@
 
     <button type="submit">Continue</button>
 </form>
+<script src="/static/filter.js"></script>
 {% endblock %}

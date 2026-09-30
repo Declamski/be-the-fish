@@ -5,7 +5,19 @@
 <p>Max depth: {{ dive.max_depth_m }} m</p>
 <p>Duration: {{ dive.duration_s }} s</p>
 <p>Water temp: {{ dive.water_temp_c }}</p>
+<p>Site: {% if site_label %}<a href="/sites/{{ dive.site_id }}">{{ site_label }}</a>{% else %}none{% endif %}</p>
+<p>Visibility: {{ dive.visibility or "not recorded" }}</p>
+<p>Current: {{ dive.current or "not recorded" }}</p>
 <p>Notes: {{ dive.notes }}</p>
+
+<h2>Site and conditions</h2>
+<form method="post" action="/dives/{{ dive.id }}/site">
+    {% set selected_site_id = dive.site_id %}
+    {% set selected_visibility = dive.visibility %}
+    {% set selected_current = dive.current %}
+    {% include "dives/_site_fields.html" %}
+    <button type="submit">Save site and conditions</button>
+</form>
 
 {% if descents %}
 <h2>Descents</h2>
@@ -31,4 +43,5 @@
     <button type="submit">Add catch</button>
 </form>
 {% endif %}
+<script src="/static/filter.js"></script>
 {% endblock %}

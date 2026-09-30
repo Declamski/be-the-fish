@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS dives (
     max_depth_m REAL,
     duration_s INTEGER,
     water_temp_c REAL,
+    visibility TEXT,
+    current TEXT,
     notes TEXT
 );
 

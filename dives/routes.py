@@ -16,17 +16,46 @@ def current_user_id():
     return flask.session["user_id"]
 
 
+def render_new_form(error=None, status=200):
+    """Show the new-dive form, with the site dropdown and condition levels filled in."""
+    return flask.render_template(
+        "dives/new.html",
+        error=error,
+        site_choices=service.get_site_choices(get_connection()),
+        visibility_levels=service.VALID_VISIBILITY,
+        current_levels=service.VALID_CURRENT,
+    ), status
+
+
+def render_detail(dive_id, error=None, status=200):
+    """Show a dive's page, including the form to set its site and conditions."""
+    try:
+        detail = service.get_dive_detail(get_connection(), dive_id, current_user_id())
+    except ValueError as e:
+        return flask.render_template("dives/list.html", dives=[], error=str(e)), 404
+    return flask.render_template(
+        "dives/detail.html",
+        error=error,
+        site_choices=service.get_site_choices(get_connection()),
+        visibility_levels=service.VALID_VISIBILITY,
+        current_levels=service.VALID_CURRENT,
+        **detail,
+    ), status
+
+
 @bp.route("/new", methods=["GET", "POST"])
 @users.login_required
 def new_dive():
     if flask.request.method == "GET":
-        return flask.render_template("dives/new.html")
+        return render_new_form()
 
     conn = get_connection()
     discipline = flask.request.form.get("discipline", "")
     started_at = flask.request.form.get("started_at", "")
     site_id = flask.request.form.get("site_id") or None
     notes = flask.request.form.get("notes") or None
+    visibility = flask.request.form.get("visibility") or None
+    current = flask.request.form.get("current") or None
 
     if discipline == "scuba":
         max_depth_m = flask.request.form.get("max_depth_m") or None
@@ -41,10 +70,12 @@ def new_dive():
                 duration_s=int(duration_s) if duration_s else None,
                 site_id=int(site_id) if site_id else None,
                 water_temp_c=float(water_temp_c) if water_temp_c else None,
+                visibility=visibility,
+                current=current,
                 notes=notes,
             )
         except ValueError as e:
-            return flask.render_template("dives/new.html", error=str(e)), 400
+            return render_new_form(error=str(e), status=400)
         return flask.redirect(f"/dives/{dive_id}")
 
     try:
@@ -52,10 +83,12 @@ def new_dive():
             discipline=discipline,
             started_at=started_at,
             site_id=int(site_id) if site_id else None,
+            visibility=visibility,
+            current=current,
             notes=notes,
         )
     except ValueError as e:
-        return flask.render_template("dives/new.html", error=str(e)), 400
+        return render_new_form(error=str(e), status=400)
 
     flask.session["draft_dive"] = draft
     return flask.redirect("/dives/new/descents")
@@ -150,11 +183,29 @@ def list_dives():
 @bp.route("/<int:dive_id>", methods=["GET"])
 @users.login_required
 def dive_detail(dive_id):
+    return render_detail(dive_id)
+
+
+@bp.route("/<int:dive_id>/site", methods=["POST"])
+@users.login_required
+def set_site_and_conditions(dive_id):
+    site_id = flask.request.form.get("site_id") or None
+    visibility = flask.request.form.get("visibility") or None
+    current = flask.request.form.get("current") or None
+
     try:
-        detail = service.get_dive_detail(get_connection(), dive_id, current_user_id())
+        service.set_dive_site_and_conditions(
+            get_connection(),
+            dive_id=dive_id,
+            user_id=current_user_id(),
+            site_id=int(site_id) if site_id else None,
+            visibility=visibility,
+            current=current,
+        )
     except ValueError as e:
-        return flask.render_template("dives/list.html", dives=[], error=str(e)), 404
-    return flask.render_template("dives/detail.html", **detail)
+        return render_detail(dive_id, error=str(e), status=400)
+
+    return flask.redirect(f"/dives/{dive_id}")
 
 
 @bp.route("/<int:dive_id>/catches", methods=["POST"])
@@ -172,7 +223,6 @@ def add_catch(dive_id):
             weight_kg=float(weight_kg) if weight_kg else None,
         )
     except ValueError as e:
-        detail = service.get_dive_detail(get_connection(), dive_id, current_user_id())
-        return flask.render_template("dives/detail.html", error=str(e), **detail), 400
+        return render_detail(dive_id, error=str(e), status=400)
 
     return flask.redirect(f"/dives/{dive_id}")

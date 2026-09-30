@@ -10,15 +10,16 @@ def init_db(conn):
 
 def insert_dive(conn, user_id, discipline, started_at, site_id=None, source_device=None,
                  external_id=None, max_depth_m=None, duration_s=None, water_temp_c=None,
-                 notes=None):
+                 visibility=None, current=None, notes=None):
     cursor = conn.execute(
         """
         INSERT INTO dives (user_id, site_id, source_device, external_id, started_at,
-                            discipline, max_depth_m, duration_s, water_temp_c, notes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            discipline, max_depth_m, duration_s, water_temp_c,
+                            visibility, current, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (user_id, site_id, source_device, external_id, started_at, discipline,
-         max_depth_m, duration_s, water_temp_c, notes),
+         max_depth_m, duration_s, water_temp_c, visibility, current, notes),
     )
     conn.commit()
     return cursor.lastrowid
@@ -38,6 +39,14 @@ def update_dive_aggregates(conn, dive_id, max_depth_m, duration_s):
     conn.execute(
         "UPDATE dives SET max_depth_m = ?, duration_s = ? WHERE id = ?",
         (max_depth_m, duration_s, dive_id),
+    )
+    conn.commit()
+
+
+def update_dive_site_and_conditions(conn, dive_id, site_id, visibility, current):
+    conn.execute(
+        "UPDATE dives SET site_id = ?, visibility = ?, current = ? WHERE id = ?",
+        (site_id, visibility, current, dive_id),
     )
     conn.commit()
 
