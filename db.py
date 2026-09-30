@@ -3,6 +3,7 @@ import os
 
 import users
 import dives
+import sites
 
 
 def get_connection(data_dir):
@@ -17,4 +18,6 @@ def init_db(data_dir):
     conn = get_connection(data_dir)
     users.init_db(conn)
     dives.init_db(conn)
+    sites.init_db(conn)
+    sites.seed_sites(conn)
     conn.close()

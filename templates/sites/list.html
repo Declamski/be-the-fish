@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Dive sites</h1>
+{% if error %}<p>{{ error }}</p>{% endif %}
+<form method="get" action="/sites">
+    <label>Search <input type="search" name="q" value="{{ query }}"
+        data-filter="#site-list li" placeholder="Name or location"></label>
+</form>
+<ul id="site-list">
+{% for site in sites %}
+    <li><a href="/sites/{{ site.id }}">{{ site.name }}</a> - {{ site.location }}</li>
+{% else %}
+    <li>No sites match your search</li>
+{% endfor %}
+</ul>
+<p>Missing a site? Contact the admin to have it added.</p>
+<p><a href="/">Home</a></p>
+<script src="/static/filter.js"></script>
+{% endblock %}

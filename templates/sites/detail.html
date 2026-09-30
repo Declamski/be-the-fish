@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ site.name }}</h1>
+<p>{{ site.location }}</p>
+{% if site.description %}<p>{{ site.description }}</p>{% endif %}
+<p><a href="/sites">All sites</a></p>
+{% endblock %}

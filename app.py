@@ -3,6 +3,7 @@ from config import load_config
 from db import init_db, get_connection
 import users
 import dives
+import sites
 
 
 def create_app(config=None):
@@ -28,6 +29,7 @@ def create_app(config=None):
 
     app.register_blueprint(users.bp)
     app.register_blueprint(dives.bp)
+    app.register_blueprint(sites.bp)
 
     @app.route("/")
     def index():
