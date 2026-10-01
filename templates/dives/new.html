@@ -13,6 +13,13 @@
     </label><br>
     <label>Started at <input type="datetime-local" name="started_at" required></label><br>
     {% include "dives/_site_fields.html" %}
+    <label>Who can see this dive
+        <select name="audience">
+            {% for audience in audiences %}
+            <option value="{{ audience }}">{{ audience }}</option>
+            {% endfor %}
+        </select>
+    </label><br>
     <label>Notes <textarea name="notes"></textarea></label><br>
 
     <p>If scuba, fill these in now. If freedive/spearfishing, you'll add descents next.</p>

@@ -1,3 +1,4 @@
+import users
 from sites import service as sites_service
 
 from . import repository
@@ -6,6 +7,24 @@ VALID_DISCIPLINES = {"scuba", "freedive", "spearfishing"}
 SESSION_DISCIPLINES = {"freedive", "spearfishing"}
 VALID_VISIBILITY = ["poor", "moderate", "good", "excellent"]
 VALID_CURRENT = ["none", "light", "moderate", "strong"]
+# Who can see a dive. New and imported dives start as private.
+VALID_AUDIENCES = ["private", "friends", "public"]
+
+
+def check_audience(audience):
+    if audience not in VALID_AUDIENCES:
+        raise ValueError("Who can see this dive must be one of: " + ", ".join(VALID_AUDIENCES))
+
+
+def can_view_dive(conn, dive, viewer_id):
+    """True if viewer_id is allowed to see this dive."""
+    if dive["user_id"] == viewer_id:
+        return True
+    if dive["audience"] == "public":
+        return True
+    if dive["audience"] == "friends":
+        return users.are_friends(conn, dive["user_id"], viewer_id)
+    return False
 
 
 def check_site_and_conditions(conn, site_id, visibility, current):
@@ -20,7 +39,8 @@ def check_site_and_conditions(conn, site_id, visibility, current):
 
 
 def create_scuba_dive(conn, user_id, started_at, max_depth_m, duration_s, site_id=None,
-                       water_temp_c=None, visibility=None, current=None, notes=None):
+                       water_temp_c=None, visibility=None, current=None, audience="private",
+                       notes=None):
     if not started_at:
         raise ValueError("Start date/time is required")
     if max_depth_m is None or max_depth_m <= 0:
@@ -28,6 +48,7 @@ def create_scuba_dive(conn, user_id, started_at, max_depth_m, duration_s, site_i
     if duration_s is None or duration_s <= 0:
         raise ValueError("Duration must be greater than 0")
     check_site_and_conditions(conn, site_id, visibility, current)
+    check_audience(audience)
 
     return repository.insert_dive(
         conn,
@@ -40,12 +61,13 @@ def create_scuba_dive(conn, user_id, started_at, max_depth_m, duration_s, site_i
         water_temp_c=water_temp_c,
         visibility=visibility,
         current=current,
+        audience=audience,
         notes=notes,
     )
 
 
 def start_session_draft(discipline, started_at, site_id=None, visibility=None, current=None,
-                        notes=None):
+                        audience="private", notes=None):
     if discipline not in SESSION_DISCIPLINES:
         raise ValueError("Discipline must be freedive or spearfishing for a session")
     if not started_at:
@@ -57,6 +79,7 @@ def start_session_draft(discipline, started_at, site_id=None, visibility=None, c
         "site_id": site_id,
         "visibility": visibility,
         "current": current,
+        "audience": audience,
         "notes": notes,
         "descents": [],
     }
@@ -79,6 +102,7 @@ def finish_session(conn, user_id, draft):
     if len(descents) == 0:
         raise ValueError("Add at least one descent before finishing the session")
     check_site_and_conditions(conn, draft["site_id"], draft["visibility"], draft["current"])
+    check_audience(draft["audience"])
 
     max_depth_m = max(d["depth_m"] for d in descents)
     duration_s = sum(d["duration_s"] for d in descents)
@@ -93,6 +117,7 @@ def finish_session(conn, user_id, draft):
         duration_s=duration_s,
         visibility=draft["visibility"],
         current=draft["current"],
+        audience=draft["audience"],
         notes=draft["notes"],
     )
 
@@ -113,6 +138,16 @@ def set_dive_site_and_conditions(conn, dive_id, user_id, site_id, visibility, cu
     check_site_and_conditions(conn, site_id, visibility, current)
 
     repository.update_dive_site_and_conditions(conn, dive_id, site_id, visibility, current)
+
+
+def set_dive_audience(conn, dive_id, user_id, audience):
+    """Change who can see a dive. Only the dive's owner can do this."""
+    dive = repository.get_dive(conn, dive_id)
+    if dive is None or dive["user_id"] != user_id:
+        raise ValueError("Dive not found")
+    check_audience(audience)
+
+    repository.update_dive_audience(conn, dive_id, audience)
 
 
 def add_catch(conn, dive_id, user_id, species, weight_kg=None):
@@ -143,9 +178,11 @@ def get_site_choices(conn):
     return choices
 
 
-def get_dive_detail(conn, dive_id, user_id):
+def get_dive_detail(conn, dive_id, viewer_id):
+    """Everything the dive page shows. Other people may view it if the audience allows."""
     dive = repository.get_dive(conn, dive_id)
-    if dive is None or dive["user_id"] != user_id:
+    # Same message for "doesn't exist" and "not allowed", so private dives stay hidden.
+    if dive is None or not can_view_dive(conn, dive, viewer_id):
         raise ValueError("Dive not found")
 
     site_label = None
@@ -154,6 +191,8 @@ def get_dive_detail(conn, dive_id, user_id):
 
     return {
         "dive": dive,
+        "is_owner": dive["user_id"] == viewer_id,
+        "owner_name": users.get_user_name(conn, dive["user_id"]),
         "site_label": site_label,
         "descents": repository.list_descents(conn, dive_id),
         "catches": repository.list_catches(conn, dive_id),

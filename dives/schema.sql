@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS dives (
     water_temp_c REAL,
     visibility TEXT,
     current TEXT,
+    audience TEXT NOT NULL DEFAULT 'private',
     notes TEXT
 );
 

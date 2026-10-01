@@ -24,6 +24,7 @@ def render_new_form(error=None, status=200):
         site_choices=service.get_site_choices(get_connection()),
         visibility_levels=service.VALID_VISIBILITY,
         current_levels=service.VALID_CURRENT,
+        audiences=service.VALID_AUDIENCES,
     ), status
 
 
@@ -39,6 +40,7 @@ def render_detail(dive_id, error=None, status=200):
         site_choices=service.get_site_choices(get_connection()),
         visibility_levels=service.VALID_VISIBILITY,
         current_levels=service.VALID_CURRENT,
+        audiences=service.VALID_AUDIENCES,
         **detail,
     ), status
 
@@ -56,6 +58,7 @@ def new_dive():
     notes = flask.request.form.get("notes") or None
     visibility = flask.request.form.get("visibility") or None
     current = flask.request.form.get("current") or None
+    audience = flask.request.form.get("audience", "private")
 
     if discipline == "scuba":
         max_depth_m = flask.request.form.get("max_depth_m") or None
@@ -72,6 +75,7 @@ def new_dive():
                 water_temp_c=float(water_temp_c) if water_temp_c else None,
                 visibility=visibility,
                 current=current,
+                audience=audience,
                 notes=notes,
             )
         except ValueError as e:
@@ -85,6 +89,7 @@ def new_dive():
             site_id=int(site_id) if site_id else None,
             visibility=visibility,
             current=current,
+            audience=audience,
             notes=notes,
         )
     except ValueError as e:
@@ -205,6 +210,17 @@ def set_site_and_conditions(dive_id):
     except ValueError as e:
         return render_detail(dive_id, error=str(e), status=400)
 
+    return flask.redirect(f"/dives/{dive_id}")
+
+
+@bp.route("/<int:dive_id>/audience", methods=["POST"])
+@users.login_required
+def set_audience(dive_id):
+    audience = flask.request.form.get("audience", "")
+    try:
+        service.set_dive_audience(get_connection(), dive_id, current_user_id(), audience)
+    except ValueError as e:
+        return render_detail(dive_id, error=str(e), status=400)
     return flask.redirect(f"/dives/{dive_id}")
 
 
