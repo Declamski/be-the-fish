@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Friends</h1>
+{% if error %}<p>{{ error }}</p>{% endif %}
+
+<h2>Find people</h2>
+<label>Search by name <input type="search" data-live-search="/friends/search"
+    data-results="#search-results" placeholder="Start typing a name" autocomplete="off"></label>
+<div id="search-results"></div>
+
+<h2>Requests for you</h2>
+<ul>
+{% for person in incoming %}
+    <li>{{ person.name }}
+        <form method="post" action="/friends/{{ person.id }}/accept" style="display:inline"><button type="submit">Accept</button></form>
+        <form method="post" action="/friends/{{ person.id }}/remove" style="display:inline"><button type="submit">Decline</button></form>
+    </li>
+{% else %}
+    <li>No requests</li>
+{% endfor %}
+</ul>
+
+<h2>Your friends</h2>
+<ul>
+{% for person in friends %}
+    <li>{{ person.name }}
+        <form method="post" action="/friends/{{ person.id }}/remove" style="display:inline"><button type="submit">Remove friend</button></form>
+    </li>
+{% else %}
+    <li>No friends yet</li>
+{% endfor %}
+</ul>
+
+<h2>Requests you sent</h2>
+<ul>
+{% for person in outgoing %}
+    <li>{{ person.name }}
+        <form method="post" action="/friends/{{ person.id }}/remove" style="display:inline"><button type="submit">Cancel</button></form>
+    </li>
+{% else %}
+    <li>No pending requests</li>
+{% endfor %}
+</ul>
+
+<p><a href="/">Home</a></p>
+<script src="/static/live_search.js"></script>
+{% endblock %}

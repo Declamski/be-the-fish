@@ -1,0 +1,20 @@
+{# Only a fragment, no base.html: static/live_search.js puts it inside the friends page. #}
+{% if query.strip() %}
+<ul>
+{% for person in results %}
+    <li>{{ person.name }}
+        {% if person.status == "none" %}
+        <form method="post" action="/friends/{{ person.id }}/request" style="display:inline"><button type="submit">Add friend</button></form>
+        {% elif person.status == "sent" %}
+        (request sent)
+        {% elif person.status == "received" %}
+        <form method="post" action="/friends/{{ person.id }}/accept" style="display:inline"><button type="submit">Accept request</button></form>
+        {% else %}
+        (friends)
+        {% endif %}
+    </li>
+{% else %}
+    <li>No one matches "{{ query }}"</li>
+{% endfor %}
+</ul>
+{% endif %}
