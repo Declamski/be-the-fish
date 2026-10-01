@@ -197,3 +197,45 @@ def get_dive_detail(conn, dive_id, viewer_id):
         "descents": repository.list_descents(conn, dive_id),
         "catches": repository.list_catches(conn, dive_id),
     }
+
+
+# --- Public functions for other domains (the seam for Assignment 2) ---
+
+def get_visible_dive(conn, dive_id, viewer_id):
+    """The dive, or None if it doesn't exist or viewer_id is not allowed to see it."""
+    dive = repository.get_dive(conn, dive_id)
+    if dive is None or not can_view_dive(conn, dive, viewer_id):
+        return None
+    return dive
+
+
+def list_feed_dives(conn, viewer_id, offset, limit):
+    """One page of the dives viewer_id may see (their own included), newest first.
+
+    Returns {"dives": [...], "has_more": True/False}. Each dive is a dict that
+    also has the site's label, so the feed doesn't need to ask the sites domain.
+    """
+    visible = []
+    for dive in repository.list_shared_and_own_dives(conn, viewer_id):
+        # Friends-only dives still need checking against the friends list.
+        if can_view_dive(conn, dive, viewer_id):
+            visible.append(dive)
+
+    page = visible[offset:offset + limit]
+
+    dives = []
+    for dive in page:
+        site_label = None
+        if dive["site_id"] is not None:
+            site_label = sites_service.get_site_label(conn, dive["site_id"])
+        dives.append({
+            "id": dive["id"],
+            "user_id": dive["user_id"],
+            "started_at": dive["started_at"],
+            "discipline": dive["discipline"],
+            "max_depth_m": dive["max_depth_m"],
+            "duration_s": dive["duration_s"],
+            "site_label": site_label,
+        })
+
+    return {"dives": dives, "has_more": len(visible) > offset + limit}

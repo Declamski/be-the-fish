@@ -4,6 +4,7 @@ from db import init_db, get_connection
 import users
 import dives
 import sites
+import feed
 
 
 def create_app(config=None):
@@ -30,6 +31,7 @@ def create_app(config=None):
     app.register_blueprint(users.bp)
     app.register_blueprint(dives.bp)
     app.register_blueprint(sites.bp)
+    app.register_blueprint(feed.bp)
 
     @app.route("/")
     def index():

@@ -4,6 +4,7 @@ import os
 import users
 import dives
 import sites
+import feed
 
 
 def get_connection(data_dir):
@@ -20,4 +21,5 @@ def init_db(data_dir):
     dives.init_db(conn)
     sites.init_db(conn)
     sites.seed_sites(conn)
+    feed.init_db(conn)
     conn.close()

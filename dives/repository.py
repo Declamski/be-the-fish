@@ -86,6 +86,18 @@ def list_catches(conn, dive_id):
     ).fetchall()
 
 
+def list_shared_and_own_dives(conn, user_id):
+    """Every dive that is not private, plus all of this user's own dives, newest first."""
+    return conn.execute(
+        """
+        SELECT * FROM dives
+        WHERE audience != 'private' OR user_id = ?
+        ORDER BY started_at DESC, id DESC
+        """,
+        (user_id,),
+    ).fetchall()
+
+
 def get_dive_by_external_id(conn, external_id):
     return conn.execute(
         "SELECT * FROM dives WHERE external_id = ?", (external_id,)

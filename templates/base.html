@@ -5,6 +5,10 @@
     <title>Dive Log</title>
 </head>
 <body>
+    {# Messages from flask.flash(), e.g. "You already gave kudos to this dive". #}
+    {% for message in get_flashed_messages() %}
+    <p>{{ message }}</p>
+    {% endfor %}
     {% block content %}{% endblock %}
 </body>
 </html>

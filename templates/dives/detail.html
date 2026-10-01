@@ -58,5 +58,10 @@
 </form>
 {% endif %}
 {% endif %}
+
+{# Kudos and comments come from the feed domain (see static/load_fragment.js). #}
+<div data-load-url="/feed/dives/{{ dive.id }}/social"></div>
+
 <script src="/static/filter.js"></script>
+<script src="/static/load_fragment.js"></script>
 {% endblock %}

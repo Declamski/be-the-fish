@@ -1,0 +1,15 @@
+{# One page of feed items. Used inside feed.html, and returned alone by /feed/more. #}
+{% for item in items %}
+<li>
+    <a href="/dives/{{ item.id }}">{{ item.owner_name }} - {{ item.discipline }} - {{ item.started_at }}</a><br>
+    {{ item.max_depth_m }} m, {{ item.duration_s }} s{% if item.site_label %} at {{ item.site_label }}{% endif %}<br>
+    {{ item.kudos_count }} kudos, {{ item.comment_count }} comments
+</li>
+{% endfor %}
+{% if has_more %}
+{# The "sentinel": when it scrolls into view, infinite_scroll.js loads data-next-url.
+   Without JavaScript the link still works as a normal "next page". #}
+<li data-next-url="/feed/more?offset={{ next_offset }}">
+    <a href="/feed?offset={{ next_offset }}">Load more</a>
+</li>
+{% endif %}
