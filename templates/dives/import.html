@@ -1,11 +1,13 @@
 {% extends "base.html" %}
+{% block title %}Import dives - Dive Log{% endblock %}
 {% block content %}
 <h1>Import dives from a file</h1>
-<p><a href="/dives/new">Back to logging a dive by hand</a></p>
+<p class="muted"><a href="/dives/new">Log a dive by hand instead</a></p>
 
-{% if error %}<p><strong>{{ error }}</strong></p>{% endif %}
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
 
 {% if summary %}
+<div class="message">
 <p><strong>Import finished.</strong></p>
 <ul>
     <li>{{ summary.imported }} dive(s) added</li>
@@ -13,10 +15,11 @@
     <li>{{ summary.skipped_invalid }} row(s) skipped: missing depth, duration or date</li>
 </ul>
 <p><a href="/dives">See your dives</a></p>
+</div>
 {% endif %}
 
-<form method="post" enctype="multipart/form-data">
-    <label>Subsurface CSV export <input type="file" name="file" accept=".csv" required></label><br>
+<form method="post" enctype="multipart/form-data" class="form">
+    <label>Subsurface CSV export <input type="file" name="file" accept=".csv" required></label>
 
     <label>Discipline
         <select name="discipline_override">
@@ -25,8 +28,8 @@
             <option value="freedive">Force all rows to freedive</option>
             <option value="spearfishing">Force all rows to spearfishing</option>
         </select>
-    </label><br>
-    <p>Only override if the watch recorded the whole file in the wrong mode.</p>
+    </label>
+    <span class="hint">Only override if the watch recorded the whole file in the wrong mode.</span>
 
     <button type="submit">Import</button>
 </form>
@@ -37,5 +40,5 @@
     <li>File &rarr; Export &rarr; CSV summary.</li>
     <li>Upload that file here.</li>
 </ol>
-<p>Importing the same file twice is safe: dives already in your log are skipped.</p>
+<p class="muted">Importing the same file twice is safe: dives already in your log are skipped.</p>
 {% endblock %}

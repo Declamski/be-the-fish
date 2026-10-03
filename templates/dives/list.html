@@ -1,13 +1,28 @@
 {% extends "base.html" %}
+{% block title %}My dives - Dive Log{% endblock %}
 {% block content %}
-<h1>Your dives</h1>
-{% if error %}<p>{{ error }}</p>{% endif %}
-<p><a href="/dives/new">Log a new dive</a> | <a href="/dives/import">Import from a file</a></p>
-<ul>
+<h1>My dives</h1>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<div class="page-actions">
+    <a class="button" href="/dives/new">Log a dive</a>
+    <a class="button secondary" href="/dives/import">Import from a file</a>
+</div>
+<ul class="card-list">
 {% for dive in dives %}
-    <li><a href="/dives/{{ dive.id }}">{{ dive.started_at }} - {{ dive.discipline }} - {{ dive.max_depth_m }} m</a></li>
+    <li class="card">
+        <a class="card-title" href="/dives/{{ dive.id }}">{{ dive.started_at | datetime }}</a>
+        <span class="badge">{{ dive.discipline }}</span>
+        <span class="card-meta">&middot; {{ dive.audience }}</span>
+        <div class="stats">
+            <div><span class="stat-label">Max depth</span><span class="stat-value">{{ dive.max_depth_m | number("m") }}</span></div>
+            <div><span class="stat-label">Time</span><span class="stat-value">{{ dive.duration_s | duration }}</span></div>
+            {% if dive.water_temp_c is not none %}
+            <div><span class="stat-label">Water</span><span class="stat-value">{{ dive.water_temp_c | number("°C") }}</span></div>
+            {% endif %}
+        </div>
+    </li>
 {% else %}
-    <li>No dives logged yet</li>
+    <li class="card muted">No dives logged yet. <a href="/dives/new">Log your first one</a>.</li>
 {% endfor %}
 </ul>
 {% endblock %}

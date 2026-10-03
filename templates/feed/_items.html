@@ -1,15 +1,23 @@
 {# One page of feed items. Used inside feed.html, and returned alone by /feed/more. #}
 {% for item in items %}
-<li>
-    <a href="/dives/{{ item.id }}">{{ item.owner_name }} - {{ item.discipline }} - {{ item.started_at }}</a><br>
-    {{ item.max_depth_m }} m, {{ item.duration_s }} s{% if item.site_label %} at {{ item.site_label }}{% endif %}<br>
-    {{ item.kudos_count }} kudos, {{ item.comment_count }} comments
+<li class="card">
+    <span class="card-meta">{{ item.owner_name }} &middot; {{ item.started_at | datetime }}</span><br>
+    <a class="card-title" href="/dives/{{ item.id }}">
+        {% if item.site_label %}{{ item.site_label }}{% else %}{{ item.discipline | capitalize }} dive{% endif %}
+    </a>
+    <span class="badge">{{ item.discipline }}</span>
+    <div class="stats">
+        <div><span class="stat-label">Max depth</span><span class="stat-value">{{ item.max_depth_m | number("m") }}</span></div>
+        <div><span class="stat-label">Time</span><span class="stat-value">{{ item.duration_s | duration }}</span></div>
+        <div><span class="stat-label">Kudos</span><span class="stat-value">{{ item.kudos_count }}</span></div>
+        <div><span class="stat-label">Comments</span><span class="stat-value">{{ item.comment_count }}</span></div>
+    </div>
 </li>
 {% endfor %}
 {% if has_more %}
 {# The "sentinel": when it scrolls into view, infinite_scroll.js loads data-next-url.
    Without JavaScript the link still works as a normal "next page". #}
-<li data-next-url="/feed/more?offset={{ next_offset }}">
+<li data-next-url="/feed/more?offset={{ next_offset }}" class="muted">
     <a href="/feed?offset={{ next_offset }}">Load more</a>
 </li>
 {% endif %}

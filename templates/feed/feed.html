@@ -1,11 +1,11 @@
 {% extends "base.html" %}
+{% block title %}Feed - Dive Log{% endblock %}
 {% block content %}
 <h1>Feed</h1>
-<p>Your dives, your friends' friends-only dives, and everyone's public dives. Newest first.</p>
-<ul id="feed-list">
+<p class="muted">Your dives, your friends' dives, and everyone's public dives. Newest first.</p>
+<ul id="feed-list" class="card-list">
 {% include "feed/_items.html" %}
 </ul>
-{% if not items %}<p>Nothing here yet. Log a dive, or add some friends.</p>{% endif %}
-<p><a href="/">Home</a></p>
+{% if not items %}<p class="card muted">Nothing here yet. <a href="/dives/new">Log a dive</a> or <a href="/friends">add some friends</a>.</p>{% endif %}
 <script src="/static/infinite_scroll.js"></script>
 {% endblock %}

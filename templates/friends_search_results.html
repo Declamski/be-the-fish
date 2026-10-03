@@ -1,20 +1,21 @@
 {# Only a fragment, no base.html: static/live_search.js puts it inside the friends page. #}
 {% if query.strip() %}
-<ul>
+<ul class="card-list">
 {% for person in results %}
-    <li>{{ person.name }}
+    <li class="card row">
+        <span class="card-title">{{ person.name }}</span>
         {% if person.status == "none" %}
-        <form method="post" action="/friends/{{ person.id }}/request" style="display:inline"><button type="submit">Add friend</button></form>
+        <form method="post" action="/friends/{{ person.id }}/request"><button type="submit">Add friend</button></form>
         {% elif person.status == "sent" %}
-        (request sent)
+        <span class="muted">Request sent</span>
         {% elif person.status == "received" %}
-        <form method="post" action="/friends/{{ person.id }}/accept" style="display:inline"><button type="submit">Accept request</button></form>
+        <form method="post" action="/friends/{{ person.id }}/accept"><button type="submit">Accept request</button></form>
         {% else %}
-        (friends)
+        <span class="badge">Friends</span>
         {% endif %}
     </li>
 {% else %}
-    <li>No one matches "{{ query }}"</li>
+    <li class="card muted">No one matches "{{ query }}".</li>
 {% endfor %}
 </ul>
 {% endif %}

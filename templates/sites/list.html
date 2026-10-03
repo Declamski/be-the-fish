@@ -1,19 +1,22 @@
 {% extends "base.html" %}
+{% block title %}Dive sites - Dive Log{% endblock %}
 {% block content %}
 <h1>Dive sites</h1>
-{% if error %}<p>{{ error }}</p>{% endif %}
-<form method="get" action="/sites">
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<form method="get" action="/sites" class="form">
     <label>Search <input type="search" name="q" value="{{ query }}"
         data-filter="#site-list li" placeholder="Name or location"></label>
 </form>
-<ul id="site-list">
+<ul id="site-list" class="card-list">
 {% for site in sites %}
-    <li><a href="/sites/{{ site.id }}">{{ site.name }}</a> - {{ site.location }}</li>
+    <li class="card">
+        <a class="card-title" href="/sites/{{ site.id }}">{{ site.name }}</a><br>
+        <span class="card-meta">{{ site.location }}</span>
+    </li>
 {% else %}
-    <li>No sites match your search</li>
+    <li class="card muted">No sites match your search.</li>
 {% endfor %}
 </ul>
-<p>Missing a site? Contact the admin to have it added.</p>
-<p><a href="/">Home</a></p>
+<p class="muted">Missing a site? Contact the admin to have it added.</p>
 <script src="/static/filter.js"></script>
 {% endblock %}

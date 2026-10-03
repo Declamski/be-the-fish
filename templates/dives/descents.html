@@ -1,24 +1,34 @@
 {% extends "base.html" %}
+{% block title %}Session in progress - Dive Log{% endblock %}
 {% block content %}
-<h1>Session in progress: {{ draft.discipline }}</h1>
-{% if error %}<p>{{ error }}</p>{% endif %}
+<h1>Session in progress</h1>
+<p><span class="badge">{{ draft.discipline }}</span> <span class="muted">{{ draft.started_at | datetime }}</span></p>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
 
 <h2>Descents so far</h2>
-<ul>
+<ul class="card-list">
 {% for d in draft.descents %}
-    <li>{{ d.depth_m }} m for {{ d.duration_s }} s</li>
+    <li class="card">
+        <span class="card-title">Descent {{ loop.index }}</span>
+        <div class="stats">
+            <div><span class="stat-label">Depth</span><span class="stat-value">{{ d.depth_m | number("m") }}</span></div>
+            <div><span class="stat-label">Time</span><span class="stat-value">{{ d.duration_s | duration }}</span></div>
+        </div>
+    </li>
 {% else %}
-    <li>No descents added yet</li>
+    <li class="card muted">No descents added yet.</li>
 {% endfor %}
 </ul>
 
 <h2>Add a descent</h2>
-<form method="post">
-    <label>Depth (m) <input type="number" step="0.1" name="depth_m" required></label><br>
-    <label>Duration (s) <input type="number" name="duration_s" required></label><br>
+<form method="post" class="form">
+    <label>Depth (m) <input type="number" step="0.1" min="0" name="depth_m" required></label>
+    <label>Duration (seconds) <input type="number" min="0" name="duration_s" required></label>
+    <span class="hint">Breath-holds are short, so descents are in seconds.</span>
     <button type="submit">Add descent</button>
 </form>
 
+<h2>Done?</h2>
 <form method="post" action="/dives/new/finish">
     <button type="submit">Finish session</button>
 </form>

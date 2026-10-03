@@ -1,0 +1,340 @@
+/* Dive Log styles. White page, black text, blue accents.
+   Colours are set once here and reused everywhere with var(--name). */
+:root {
+    --text: #111111;
+    --muted: #5b6573;
+    --background: #ffffff;
+    --blue: #1d5fa8;
+    --blue-dark: #154a85;
+    --blue-light: #eaf2fb;
+    --border: #dce3eb;
+    --error-background: #fdecec;
+    --error-text: #8a1f1f;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--text);
+    background: var(--background);
+}
+
+a {
+    color: var(--blue);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+h1 {
+    font-size: 1.7rem;
+    margin: 0 0 8px;
+}
+
+h2 {
+    font-size: 1.2rem;
+    margin: 28px 0 10px;
+}
+
+/* --- Header and navigation --- */
+
+.site-header {
+    border-bottom: 3px solid var(--blue);
+    background: var(--background);
+}
+
+.nav {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 12px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.brand {
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--blue-dark);
+}
+
+.nav-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 16px;
+}
+
+.nav-links a {
+    color: var(--text);
+}
+
+.nav-links a:hover {
+    color: var(--blue);
+}
+
+/* --- Page layout --- */
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+}
+
+.muted {
+    color: var(--muted);
+}
+
+.page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0 20px;
+}
+
+/* --- Messages --- */
+
+.message {
+    background: var(--blue-light);
+    border-left: 4px solid var(--blue);
+    padding: 10px 14px;
+    border-radius: 4px;
+}
+
+.error {
+    background: var(--error-background);
+    border-left: 4px solid var(--error-text);
+    color: var(--error-text);
+    padding: 10px 14px;
+    border-radius: 4px;
+}
+
+/* --- Cards (feed items, dives, sites) --- */
+
+.card-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    background: var(--background);
+}
+
+.card-title {
+    font-weight: 600;
+    font-size: 1.05rem;
+}
+
+.card-meta {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+/* A row of small facts: "18 m", "45 min", "Blue Hole". */
+.stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+    margin-top: 6px;
+}
+
+.stat-label {
+    display: block;
+    color: var(--muted);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.stat-value {
+    font-weight: 600;
+}
+
+.badge {
+    display: inline-block;
+    background: var(--blue-light);
+    color: var(--blue-dark);
+    border-radius: 999px;
+    padding: 1px 10px;
+    font-size: 0.85rem;
+    text-transform: capitalize;
+}
+
+/* --- Forms --- */
+
+form {
+    margin: 0;
+}
+
+.form {
+    max-width: 480px;
+}
+
+label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 14px;
+}
+
+input,
+select,
+textarea {
+    display: block;
+    width: 100%;
+    margin-top: 4px;
+    padding: 8px 10px;
+    font: inherit;
+    font-weight: 400;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--background);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 2px solid var(--blue);
+    outline-offset: 0;
+    border-color: var(--blue);
+}
+
+textarea {
+    min-height: 80px;
+}
+
+.hint {
+    display: block;
+    color: var(--muted);
+    font-weight: 400;
+    font-size: 0.9rem;
+    margin: -8px 0 14px;
+}
+
+fieldset {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px 14px;
+    margin: 0 0 16px;
+}
+
+legend {
+    font-weight: 600;
+    padding: 0 6px;
+    color: var(--blue-dark);
+}
+
+/* --- Buttons --- */
+
+button,
+.button {
+    display: inline-block;
+    font: inherit;
+    font-weight: 600;
+    padding: 8px 16px;
+    border: 1px solid var(--blue);
+    border-radius: 6px;
+    background: var(--blue);
+    color: #ffffff;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+button:hover,
+.button:hover {
+    background: var(--blue-dark);
+    text-decoration: none;
+}
+
+/* Outline style for less important actions: "Decline", "Delete", "Cancel". */
+.secondary {
+    background: var(--background);
+    color: var(--blue);
+}
+
+.secondary:hover {
+    background: var(--blue-light);
+}
+
+/* The "Log out" button in the nav looks like a link. */
+.link-button {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--text);
+    font-weight: 400;
+}
+
+.link-button:hover {
+    background: none;
+    color: var(--blue);
+}
+
+.inline {
+    display: inline;
+}
+
+/* A person or item with buttons on the right (friends, comments). */
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.row-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+/* --- Welcome page --- */
+
+.hero {
+    background: var(--blue-light);
+    border-radius: 12px;
+    padding: 32px 24px;
+    margin-bottom: 24px;
+}
+
+.hero h1 {
+    font-size: 2rem;
+    color: var(--blue-dark);
+}
+
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+/* --- Small screens (phones) --- */
+
+@media (max-width: 600px) {
+    h1 {
+        font-size: 1.4rem;
+    }
+
+    .container {
+        padding-top: 16px;
+    }
+
+    .hero {
+        padding: 24px 16px;
+    }
+}

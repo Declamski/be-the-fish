@@ -1,31 +1,42 @@
 {% extends "base.html" %}
+{% block title %}Log a dive - Dive Log{% endblock %}
 {% block content %}
-<h1>Log a new dive</h1>
-<p>Got a file from your dive computer? <a href="/dives/import">Import a Subsurface CSV instead</a>.</p>
-{% if error %}<p>{{ error }}</p>{% endif %}
-<form method="post">
-    <label>Discipline
-        <select name="discipline" required>
-            <option value="scuba">Scuba</option>
-            <option value="freedive">Freedive</option>
-            <option value="spearfishing">Spearfishing</option>
-        </select>
-    </label><br>
-    <label>Started at <input type="datetime-local" name="started_at" required></label><br>
-    {% include "dives/_site_fields.html" %}
-    <label>Who can see this dive
-        <select name="audience">
-            {% for audience in audiences %}
-            <option value="{{ audience }}">{{ audience }}</option>
-            {% endfor %}
-        </select>
-    </label><br>
-    <label>Notes <textarea name="notes"></textarea></label><br>
+<h1>Log a dive</h1>
+<p class="muted">Got a file from your dive computer? <a href="/dives/import">Import a Subsurface CSV instead</a>.</p>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<form method="post" class="form">
+    <fieldset>
+        <legend>The dive</legend>
+        <label>Discipline
+            <select name="discipline" required>
+                <option value="scuba">Scuba</option>
+                <option value="freedive">Freedive</option>
+                <option value="spearfishing">Spearfishing</option>
+            </select>
+        </label>
+        <label>Started at <input type="datetime-local" name="started_at" required></label>
+        <label>Who can see this dive
+            <select name="audience">
+                {% for audience in audiences %}
+                <option value="{{ audience }}">{{ audience }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Notes <textarea name="notes"></textarea></label>
+    </fieldset>
 
-    <p>If scuba, fill these in now. If freedive/spearfishing, you'll add descents next.</p>
-    <label>Max depth (m) <input type="number" step="0.1" name="max_depth_m"></label><br>
-    <label>Duration (s) <input type="number" name="duration_s"></label><br>
-    <label>Water temp (&deg;C) <input type="number" step="0.1" name="water_temp_c"></label><br>
+    <fieldset>
+        <legend>Site and conditions (optional)</legend>
+        {% include "dives/_site_fields.html" %}
+    </fieldset>
+
+    <fieldset>
+        <legend>Scuba only</legend>
+        <span class="hint" style="margin-top: 0">Freedive and spearfishing sessions add each descent on the next page instead.</span>
+        <label>Max depth (m) <input type="number" step="0.1" min="0" name="max_depth_m"></label>
+        <label>Duration (minutes) <input type="number" step="1" min="0" name="duration_min"></label>
+        <label>Water temperature (&deg;C) <input type="number" step="0.1" name="water_temp_c"></label>
+    </fieldset>
 
     <button type="submit">Continue</button>
 </form>

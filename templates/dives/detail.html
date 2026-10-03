@@ -1,59 +1,51 @@
 {% extends "base.html" %}
+{% block title %}Dive - Dive Log{% endblock %}
 {% block content %}
-<h1>{{ dive.discipline }} dive - {{ dive.started_at }}</h1>
-{% if not is_owner %}<p>Logged by {{ owner_name }}</p>{% endif %}
-{% if error %}<p>{{ error }}</p>{% endif %}
-<p>Max depth: {{ dive.max_depth_m }} m</p>
-<p>Duration: {{ dive.duration_s }} s</p>
-<p>Water temp: {{ dive.water_temp_c }}</p>
-<p>Site: {% if site_label %}<a href="/sites/{{ dive.site_id }}">{{ site_label }}</a>{% else %}none{% endif %}</p>
-<p>Visibility: {{ dive.visibility or "not recorded" }}</p>
-<p>Current: {{ dive.current or "not recorded" }}</p>
-<p>Notes: {{ dive.notes }}</p>
+<p class="card-meta">{% if is_owner %}Your dive &middot; {{ dive.audience }}{% else %}Logged by {{ owner_name }}{% endif %}</p>
+<h1>{{ dive.started_at | datetime }}</h1>
+<p><span class="badge">{{ dive.discipline }}</span>
+    {% if site_label %}<a href="/sites/{{ dive.site_id }}">{{ site_label }}</a>{% else %}<span class="muted">No site</span>{% endif %}</p>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
 
-{% if is_owner %}
-<h2>Who can see this dive</h2>
-<form method="post" action="/dives/{{ dive.id }}/audience">
-    <select name="audience">
-        {% for audience in audiences %}
-        <option value="{{ audience }}" {% if audience == dive.audience %}selected{% endif %}>{{ audience }}</option>
-        {% endfor %}
-    </select>
-    <button type="submit">Save</button>
-</form>
-
-<h2>Site and conditions</h2>
-<form method="post" action="/dives/{{ dive.id }}/site">
-    {% set selected_site_id = dive.site_id %}
-    {% set selected_visibility = dive.visibility %}
-    {% set selected_current = dive.current %}
-    {% include "dives/_site_fields.html" %}
-    <button type="submit">Save site and conditions</button>
-</form>
-{% endif %}
+<div class="card">
+    <div class="stats">
+        <div><span class="stat-label">Max depth</span><span class="stat-value">{{ dive.max_depth_m | number("m") }}</span></div>
+        <div><span class="stat-label">{% if descents %}Total time{% else %}Time{% endif %}</span><span class="stat-value">{{ dive.duration_s | duration }}</span></div>
+        <div><span class="stat-label">Water</span><span class="stat-value">{{ dive.water_temp_c | number("°C") }}</span></div>
+        <div><span class="stat-label">Visibility</span><span class="stat-value">{{ dive.visibility or "-" }}</span></div>
+        <div><span class="stat-label">Current</span><span class="stat-value">{{ dive.current or "-" }}</span></div>
+    </div>
+    {% if dive.notes %}<p>{{ dive.notes }}</p>{% endif %}
+</div>
 
 {% if descents %}
 <h2>Descents</h2>
-<ul>
+<ul class="card-list">
 {% for d in descents %}
-    <li>{{ d.depth_m }} m for {{ d.duration_s }} s</li>
+    <li class="card">
+        <span class="card-title">Descent {{ loop.index }}</span>
+        <div class="stats">
+            <div><span class="stat-label">Depth</span><span class="stat-value">{{ d.depth_m | number("m") }}</span></div>
+            <div><span class="stat-label">Time</span><span class="stat-value">{{ d.duration_s | duration }}</span></div>
+        </div>
+    </li>
 {% endfor %}
 </ul>
 {% endif %}
 
 {% if dive.discipline == "spearfishing" %}
 <h2>Catches</h2>
-<ul>
+<ul class="card-list">
 {% for c in catches %}
-    <li>{{ c.species }} ({{ c.weight_kg }} kg)</li>
+    <li class="card"><span class="card-title">{{ c.species }}</span> {% if c.weight_kg is not none %}<span class="muted">{{ c.weight_kg | number("kg") }}</span>{% endif %}</li>
 {% else %}
-    <li>No catches logged yet</li>
+    <li class="card muted">No catches logged yet.</li>
 {% endfor %}
 </ul>
 {% if is_owner %}
-<form method="post" action="/dives/{{ dive.id }}/catches">
-    <label>Species <input type="text" name="species" required></label><br>
-    <label>Weight (kg) <input type="number" step="0.1" name="weight_kg"></label><br>
+<form method="post" action="/dives/{{ dive.id }}/catches" class="form">
+    <label>Species <input type="text" name="species" required></label>
+    <label>Weight (kg) <input type="number" step="0.1" min="0" name="weight_kg"></label>
     <button type="submit">Add catch</button>
 </form>
 {% endif %}
@@ -61,6 +53,33 @@
 
 {# Kudos and comments come from the feed domain (see static/load_fragment.js). #}
 <div data-load-url="/feed/dives/{{ dive.id }}/social"></div>
+
+{% if is_owner %}
+<h2>Edit this dive</h2>
+<form method="post" action="/dives/{{ dive.id }}/audience" class="form">
+    <fieldset>
+        <legend>Who can see this dive</legend>
+        <label>Audience
+            <select name="audience">
+                {% for audience in audiences %}
+                <option value="{{ audience }}" {% if audience == dive.audience %}selected{% endif %}>{{ audience }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button type="submit" class="secondary">Save audience</button>
+    </fieldset>
+</form>
+<form method="post" action="/dives/{{ dive.id }}/site" class="form">
+    <fieldset>
+        <legend>Site and conditions</legend>
+        {% set selected_site_id = dive.site_id %}
+        {% set selected_visibility = dive.visibility %}
+        {% set selected_current = dive.current %}
+        {% include "dives/_site_fields.html" %}
+        <button type="submit" class="secondary">Save site and conditions</button>
+    </fieldset>
+</form>
+{% endif %}
 
 <script src="/static/filter.js"></script>
 <script src="/static/load_fragment.js"></script>

@@ -1,7 +1,10 @@
 {% extends "base.html" %}
+{% block title %}{{ site.name }} - Dive Log{% endblock %}
 {% block content %}
+<p class="card-meta"><a href="/sites">&larr; All sites</a></p>
 <h1>{{ site.name }}</h1>
-<p>{{ site.location }}</p>
-{% if site.description %}<p>{{ site.description }}</p>{% endif %}
-<p><a href="/sites">All sites</a></p>
+<p><span class="badge">{{ site.location }}</span></p>
+{% if site.description %}
+<div class="card"><p>{{ site.description }}</p></div>
+{% endif %}
 {% endblock %}

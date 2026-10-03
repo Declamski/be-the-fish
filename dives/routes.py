@@ -62,7 +62,8 @@ def new_dive():
 
     if discipline == "scuba":
         max_depth_m = flask.request.form.get("max_depth_m") or None
-        duration_s = flask.request.form.get("duration_s") or None
+        # The form asks for minutes; the database stores seconds.
+        duration_min = flask.request.form.get("duration_min") or None
         water_temp_c = flask.request.form.get("water_temp_c") or None
         try:
             dive_id = service.create_scuba_dive(
@@ -70,7 +71,7 @@ def new_dive():
                 user_id=current_user_id(),
                 started_at=started_at,
                 max_depth_m=float(max_depth_m) if max_depth_m else None,
-                duration_s=int(duration_s) if duration_s else None,
+                duration_s=round(float(duration_min) * 60) if duration_min else None,
                 site_id=int(site_id) if site_id else None,
                 water_temp_c=float(water_temp_c) if water_temp_c else None,
                 visibility=visibility,

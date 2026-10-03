@@ -1,47 +1,53 @@
 {% extends "base.html" %}
+{% block title %}Friends - Dive Log{% endblock %}
 {% block content %}
 <h1>Friends</h1>
-{% if error %}<p>{{ error }}</p>{% endif %}
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
 
 <h2>Find people</h2>
-<label>Search by name <input type="search" data-live-search="/friends/search"
-    data-results="#search-results" placeholder="Start typing a name" autocomplete="off"></label>
+<div class="form">
+    <label>Search by name <input type="search" data-live-search="/friends/search"
+        data-results="#search-results" placeholder="Start typing a name" autocomplete="off"></label>
+</div>
 <div id="search-results"></div>
 
 <h2>Requests for you</h2>
-<ul>
+<ul class="card-list">
 {% for person in incoming %}
-    <li>{{ person.name }}
-        <form method="post" action="/friends/{{ person.id }}/accept" style="display:inline"><button type="submit">Accept</button></form>
-        <form method="post" action="/friends/{{ person.id }}/remove" style="display:inline"><button type="submit">Decline</button></form>
+    <li class="card row">
+        <span class="card-title">{{ person.name }}</span>
+        <span class="row-buttons">
+            <form method="post" action="/friends/{{ person.id }}/accept"><button type="submit">Accept</button></form>
+            <form method="post" action="/friends/{{ person.id }}/remove"><button type="submit" class="secondary">Decline</button></form>
+        </span>
     </li>
 {% else %}
-    <li>No requests</li>
+    <li class="card muted">No requests.</li>
 {% endfor %}
 </ul>
 
 <h2>Your friends</h2>
-<ul>
+<ul class="card-list">
 {% for person in friends %}
-    <li>{{ person.name }}
-        <form method="post" action="/friends/{{ person.id }}/remove" style="display:inline"><button type="submit">Remove friend</button></form>
+    <li class="card row">
+        <span class="card-title">{{ person.name }}</span>
+        <form method="post" action="/friends/{{ person.id }}/remove"><button type="submit" class="secondary">Remove friend</button></form>
     </li>
 {% else %}
-    <li>No friends yet</li>
+    <li class="card muted">No friends yet. Search for someone above.</li>
 {% endfor %}
 </ul>
 
 <h2>Requests you sent</h2>
-<ul>
+<ul class="card-list">
 {% for person in outgoing %}
-    <li>{{ person.name }}
-        <form method="post" action="/friends/{{ person.id }}/remove" style="display:inline"><button type="submit">Cancel</button></form>
+    <li class="card row">
+        <span class="card-title">{{ person.name }}</span>
+        <form method="post" action="/friends/{{ person.id }}/remove"><button type="submit" class="secondary">Cancel</button></form>
     </li>
 {% else %}
-    <li>No pending requests</li>
+    <li class="card muted">No pending requests.</li>
 {% endfor %}
 </ul>
-
-<p><a href="/">Home</a></p>
 <script src="/static/live_search.js"></script>
 {% endblock %}

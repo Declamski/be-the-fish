@@ -1,28 +1,35 @@
 {# Kudos + comments for one dive. Returned alone by /feed/dives/<id>/social and
    put at the bottom of the dive page by load_fragment.js. #}
 <h2>Kudos</h2>
-<p>{{ kudos_count }} kudos</p>
-{% if can_give_kudos %}
-    {% if viewer_gave_kudos %}
-    <form method="post" action="/feed/dives/{{ dive_id }}/kudos/remove"><button type="submit">Take back kudos</button></form>
-    {% else %}
-    <form method="post" action="/feed/dives/{{ dive_id }}/kudos"><button type="submit">Give kudos</button></form>
+<div class="row">
+    <span><span class="stat-value">{{ kudos_count }}</span> kudos</span>
+    {% if can_give_kudos %}
+        {% if viewer_gave_kudos %}
+        <form method="post" action="/feed/dives/{{ dive_id }}/kudos/remove"><button type="submit" class="secondary">Take back kudos</button></form>
+        {% else %}
+        <form method="post" action="/feed/dives/{{ dive_id }}/kudos"><button type="submit">Give kudos</button></form>
+        {% endif %}
     {% endif %}
-{% endif %}
+</div>
 
 <h2>Comments</h2>
-<ul>
+<ul class="card-list">
 {% for comment in comments %}
-    <li><strong>{{ comment.author_name }}</strong> ({{ comment.created_at }}): {{ comment.body }}
-        {% if comment.is_author %}
-        <form method="post" action="/feed/comments/{{ comment.id }}/delete" style="display:inline"><button type="submit">Delete</button></form>
-        {% endif %}
+    <li class="card">
+        <div class="row">
+            <span class="card-meta"><strong>{{ comment.author_name }}</strong> &middot; {{ comment.created_at | datetime }}</span>
+            {% if comment.is_author %}
+            <form method="post" action="/feed/comments/{{ comment.id }}/delete"><button type="submit" class="secondary">Delete</button></form>
+            {% endif %}
+        </div>
+        <p>{{ comment.body }}</p>
     </li>
 {% else %}
-    <li>No comments yet</li>
+    <li class="card muted">No comments yet.</li>
 {% endfor %}
 </ul>
-<form method="post" action="/feed/dives/{{ dive_id }}/comments">
-    <label>Add a comment <textarea name="body" maxlength="{{ max_comment_length }}" required></textarea></label><br>
+<form method="post" action="/feed/dives/{{ dive_id }}/comments" class="form">
+    <label>Add a comment <textarea name="body" maxlength="{{ max_comment_length }}" required></textarea></label>
+    <span class="hint">Up to {{ max_comment_length }} characters.</span>
     <button type="submit">Post comment</button>
 </form>

@@ -1,14 +1,41 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Dive Log</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Dive Log{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    {# Messages from flask.flash(), e.g. "You already gave kudos to this dive". #}
-    {% for message in get_flashed_messages() %}
-    <p>{{ message }}</p>
-    {% endfor %}
-    {% block content %}{% endblock %}
+    <header class="site-header">
+        <nav class="nav">
+            <a class="brand" href="/">Dive Log</a>
+            {% if current_user %}
+            <div class="nav-links">
+                <a href="/feed">Feed</a>
+                <a href="/dives">My dives</a>
+                <a href="/dives/new">Log a dive</a>
+                <a href="/sites">Sites</a>
+                <a href="/friends">Friends</a>
+                <form method="post" action="/logout" class="inline">
+                    <button type="submit" class="link-button">Log out</button>
+                </form>
+            </div>
+            {% else %}
+            <div class="nav-links">
+                <a href="/login">Log in</a>
+                <a href="/signup">Sign up</a>
+            </div>
+            {% endif %}
+        </nav>
+    </header>
+
+    <main class="container">
+        {# Messages from flask.flash(), e.g. "You already gave kudos to this dive". #}
+        {% for message in get_flashed_messages() %}
+        <p class="message">{{ message }}</p>
+        {% endfor %}
+        {% block content %}{% endblock %}
+    </main>
 </body>
 </html>

@@ -1,11 +1,34 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Dive Log</h1>
 {% if user %}
-    <p>Logged in as {{ user.name }}</p>
-    <p><a href="/feed">Feed</a> | <a href="/dives">Your dives</a> | <a href="/sites">Dive sites</a> | <a href="/friends">Friends</a></p>
-    <form method="post" action="/logout"><button type="submit">Log out</button></form>
+<section class="hero">
+    <h1>Welcome back, {{ user.name }}</h1>
+    <p>Log your latest dive or see what your friends have been up to.</p>
+    <div class="page-actions">
+        <a class="button" href="/dives/new">Log a dive</a>
+        <a class="button secondary" href="/feed">Open the feed</a>
+    </div>
+</section>
+<div class="feature-grid">
+    <a class="card" href="/dives"><span class="card-title">My dives</span><br><span class="card-meta">Everything you've logged</span></a>
+    <a class="card" href="/dives/import"><span class="card-title">Import</span><br><span class="card-meta">Add dives from a Subsurface CSV</span></a>
+    <a class="card" href="/sites"><span class="card-title">Dive sites</span><br><span class="card-meta">Browse and search sites</span></a>
+    <a class="card" href="/friends"><span class="card-title">Friends</span><br><span class="card-meta">Find divers and manage requests</span></a>
+</div>
 {% else %}
-    <p><a href="/login">Log in</a> or <a href="/signup">sign up</a></p>
+<section class="hero">
+    <h1>Your dives, all in one log</h1>
+    <p>A logbook for scuba divers, freedivers and spearfishers. Import dives from your dive computer
+       or log them by hand, tag the site and conditions, and share them with friends.</p>
+    <div class="page-actions">
+        <a class="button" href="/signup">Create an account</a>
+        <a class="button secondary" href="/login">Log in</a>
+    </div>
+</section>
+<div class="feature-grid">
+    <div class="card"><span class="card-title">Every discipline</span><br><span class="card-meta">Scuba dives, freedive sessions with each descent, and spearfishing catches.</span></div>
+    <div class="card"><span class="card-title">Import from your watch</span><br><span class="card-meta">Upload a Subsurface CSV export. Re-importing never makes duplicates.</span></div>
+    <div class="card"><span class="card-title">Share if you want</span><br><span class="card-meta">Each dive is private, friends-only or public. Friends can give kudos and comment.</span></div>
+</div>
 {% endif %}
 {% endblock %}

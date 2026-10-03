@@ -2,7 +2,7 @@
    Expects site_choices, visibility_levels, current_levels, and optionally
    selected_site_id, selected_visibility, selected_current. #}
 <label>Search sites <input type="search" data-filter-select="#site-select"
-    placeholder="Name or location"></label><br>
+    placeholder="Type to narrow the list below"></label>
 <label>Site
     <select name="site_id" id="site-select">
         <option value="">No site</option>
@@ -10,8 +10,8 @@
         <option value="{{ choice.id }}" {% if choice.id == selected_site_id %}selected{% endif %}>{{ choice.label }}</option>
         {% endfor %}
     </select>
-</label><br>
-<small>Missing a site? Contact the admin to have it added.</small><br>
+</label>
+<span class="hint">Missing a site? Contact the admin to have it added.</span>
 <label>Visibility
     <select name="visibility">
         <option value="">Not recorded</option>
@@ -19,7 +19,7 @@
         <option value="{{ level }}" {% if level == selected_visibility %}selected{% endif %}>{{ level }}</option>
         {% endfor %}
     </select>
-</label><br>
+</label>
 <label>Current
     <select name="current">
         <option value="">Not recorded</option>
@@ -27,4 +27,4 @@
         <option value="{{ level }}" {% if level == selected_current %}selected{% endif %}>{{ level }}</option>
         {% endfor %}
     </select>
-</label><br>
+</label>

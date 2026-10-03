@@ -5,6 +5,7 @@ import users
 import dives
 import sites
 import feed
+import formatting
 
 
 def create_app(config=None):
@@ -32,6 +33,16 @@ def create_app(config=None):
     app.register_blueprint(dives.bp)
     app.register_blueprint(sites.bp)
     app.register_blueprint(feed.bp)
+
+    # Readable numbers and dates in templates, e.g. {{ dive.duration_s | duration }}.
+    app.jinja_env.filters["duration"] = formatting.format_duration
+    app.jinja_env.filters["datetime"] = formatting.format_datetime
+    app.jinja_env.filters["number"] = formatting.format_number
+
+    # Every template gets current_user, so base.html can show the nav bar.
+    @app.context_processor
+    def add_current_user():
+        return {"current_user": users.get_current_user(flask.g.db)}
 
     @app.route("/")
     def index():
