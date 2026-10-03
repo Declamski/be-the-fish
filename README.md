@@ -151,3 +151,129 @@ Domains never query each other's tables. When one domain needs another's data, i
 a public function in that domain's `service.py`, for example
 `sites.service.site_exists()` or `dives.service.get_visible_dive()`. Those calls are the
 seams where the app can be split into separate services later.
+
+## Architecture
+
+One Flask process serves every page. Each domain is a blueprint with the same three
+layers (`routes.py` → `service.py` → `repository.py`, see *Project structure* above).
+The arrows are the **only** calls between domains, labelled with the public functions
+used. Each one goes to the other domain's `service.py` (or the shared `users.py`). No
+domain imports another domain's `repository.py` or reads its tables. Solid arrows are
+domain-to-domain calls; dotted arrows go to the shared `users.py`.
+
+```mermaid
+flowchart TB
+    browser["Browser<br/>HTML pages, style.css, small vanilla JS"]
+
+    subgraph app["Flask app: one process, started by app.py"]
+        direction LR
+        feed["<b>feed/</b> (domain 3)<br/>routes.py<br/>service.py<br/>repository.py"]
+        dives["<b>dives/</b> (domain 1)<br/>routes.py<br/>service.py<br/>repository.py<br/>importer.py"]
+        sites["<b>sites/</b> (domain 2)<br/>routes.py<br/>service.py<br/>repository.py"]
+        users["<b>users.py</b> (shared)<br/>login, signup<br/>friend requests"]
+
+        feed -- "get_visible_dive()<br/>list_feed_dives()" --> dives
+        dives -- "site_exists()<br/>get_site_label()<br/>search_sites()" --> sites
+        feed -. "get_user_name()" .-> users
+        dives -. "are_friends()<br/>get_user_name()" .-> users
+    end
+
+    db[("SQLite<br/>$DATA_DIR/divelog.db")]
+
+    browser -- "HTTP" --> app
+    app -- "each module reads and writes<br/>only its own tables" --> db
+```
+
+Dependencies only point one way: feed → dives → sites, and feed and dives → users. The
+dive page still shows kudos and comments: the browser loads them from
+`/feed/dives/<id>/social` (`static/load_fragment.js`), so `dives` never imports `feed`.
+
+## Database schema
+
+All tables live in one SQLite file, created at startup by each domain's schema. A
+**solid line** is a real `FOREIGN KEY` between tables of the same domain. A **dashed
+line** is a plain integer ID pointing into another domain. It has no foreign key on
+purpose, and it is checked through that domain's service instead (ADR-2, ADR-3).
+
+| Owner | Tables |
+|---|---|
+| `users.py` | `users`, `friendships` |
+| `dives/` | `dives`, `descents`, `catches` |
+| `sites/` | `sites` |
+| `feed/` | `kudos`, `comments` |
+
+```mermaid
+erDiagram
+    users ||--o{ friendships : "requester_id, addressee_id"
+    dives ||--o{ descents : "dive_id"
+    dives ||--o{ catches : "dive_id"
+    users ||..o{ dives : "user_id"
+    sites |o..o{ dives : "site_id (optional)"
+    dives ||..o{ kudos : "dive_id"
+    users ||..o{ kudos : "user_id"
+    dives ||..o{ comments : "dive_id"
+    users ||..o{ comments : "user_id"
+
+    users {
+        INTEGER id PK
+        TEXT email UK
+        TEXT name
+        TEXT password_hash
+    }
+    friendships {
+        INTEGER id PK
+        INTEGER requester_id FK
+        INTEGER addressee_id FK
+        TEXT status "pending or accepted"
+    }
+    dives {
+        INTEGER id PK
+        INTEGER user_id "users.id, no FK"
+        INTEGER site_id "sites.id, no FK, optional"
+        TEXT source_device
+        TEXT external_id UK "import de-duplication"
+        TEXT started_at "local time, ISO 8601"
+        TEXT discipline "scuba, freedive, spearfishing"
+        REAL max_depth_m
+        INTEGER duration_s
+        REAL water_temp_c
+        TEXT visibility "poor to excellent"
+        TEXT current "none to strong"
+        TEXT audience "private, friends, public"
+        TEXT notes
+    }
+    descents {
+        INTEGER id PK
+        INTEGER dive_id FK
+        REAL depth_m
+        INTEGER duration_s
+        TEXT started_at
+    }
+    catches {
+        INTEGER id PK
+        INTEGER dive_id FK
+        TEXT species
+        REAL weight_kg
+    }
+    sites {
+        INTEGER id PK
+        TEXT name
+        TEXT location
+        TEXT description
+    }
+    kudos {
+        INTEGER dive_id PK "dives.id, no FK"
+        INTEGER user_id PK "users.id, no FK"
+    }
+    comments {
+        INTEGER id PK
+        INTEGER dive_id "dives.id, no FK"
+        INTEGER user_id "users.id, no FK"
+        TEXT body "1 to 500 characters"
+        TEXT created_at
+    }
+```
+
+A freedive or spearfishing **session** is one `dives` row. Its descents are rows in
+`descents`, and the session's `max_depth_m` and `duration_s` are calculated from them
+(ADR-3). A scuba dive is one `dives` row with no descents.
