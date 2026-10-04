@@ -1,4 +1,4 @@
-/* Dive Log styles. White page, black text, blue accents.
+/* Be the Fish styles. White page, black text, blue accents.
    Colours are set once here and reused everywhere with var(--name). */
 :root {
     --text: #111111;

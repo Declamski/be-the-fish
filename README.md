@@ -1,4 +1,4 @@
-# Dive Log
+# Be the Fish
 
 A logbook web app for scuba divers, freedivers and spearfishers. Flask + SQLite, single
 process. Design decisions are in [ADR.md](ADR.md), and AI use is in [AI_USAGE.md](AI_USAGE.md).

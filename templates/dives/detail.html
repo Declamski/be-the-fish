@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Dive - Dive Log{% endblock %}
+{% block title %}Dive - Be the Fish{% endblock %}
 {% block content %}
 <p class="card-meta">{% if is_owner %}Your dive &middot; {{ dive.audience }}{% else %}Logged by {{ owner_name }}{% endif %}</p>
 <h1>{{ dive.started_at | datetime }}</h1>
