@@ -31,19 +31,19 @@
 ---
 
 ## 4. Testing approach
-* **Date:** 
+* **Date:** 2026-10-04
 * **Status:** Decided
-* **Context:**
-* **Decision:**
-* **Alternatives considered:**
-* **Consequences:**
+* **Context:** We are required to test ≥70% of our core logic. Where and how tests run has to be decided. 
+* **Decision:** The thing to be tested was the core business logic over the domains. I decided to test mainly the /service.py files for each domain and leave much of routes.py untested, doing this is testing the logic for each section but not the translation from services to browser. Tests are run on their own fresh databases in a side folder, this allows for them to be tested properly without interfering with the real data.
+* **Alternatives considered:** Running the tests on the actual database and deleting additions after: It just adds too much complication and is unnecessary. Also testing routes: Although it would have covered more they aren't fully required and would sometimes just be retesting service files.
+* **Consequences:** Pages aren't automatically checked, those have to be done through human testing to find any bugs throughout the app. Coverage is 74% which is barely above the limit, testing more could have been a generally smarter thing to do.
 
 ---
 
 ## 5. What is deliberately not built
-* **Date:** 
+* **Date:** 2026-10-04
 * **Status:** Decided
-* **Context:**
-* **Decision:**
-* **Alternatives considered:**
-* **Consequences:**
+* **Context:** A very powerful feature to have in fitness/activity apps is connection to hardware devices such as watches. In diving, freediving and spearfishing you often use a dive computer (essentially a dive watch) to give you statistics on your dives as well as keep you safe.
+* **Decision:** Although I originally wanted to connect devices directly to upload dive logs I ended up going down a different path. I allowed for 2 means of data imports, manual entry and importing csv files. This allows for logs to be entered without going directly through an external device.
+* **Alternatives considered:** Allowing direct communication with a dive computer. I could have spent time trying to implement this as a feature but I realised that it was out of my current scope as I'm without hardware to test the direct access. I could have looked into making a mock connection a different way but I decided it would be eating time that I could use on other things.
+* **Consequences:** Not having this feature is a big hit because it adds a big user experience addition for users. It is definitely something I would like to implement as I move forward with the project and have access to what's required to make it happen.
