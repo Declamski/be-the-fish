@@ -47,3 +47,58 @@
 * **Decision:** Although I originally wanted to connect devices directly to upload dive logs I ended up going down a different path. I allowed for 2 means of data imports, manual entry and importing csv files. This allows for logs to be entered without going directly through an external device.
 * **Alternatives considered:** Allowing direct communication with a dive computer. I could have spent time trying to implement this as a feature but I realised that it was out of my current scope as I'm without hardware to test the direct access. I could have looked into making a mock connection a different way but I decided it would be eating time that I could use on other things.
 * **Consequences:** Not having this feature is a big hit because it adds a big user experience addition for users. It is definitely something I would like to implement as I move forward with the project and have access to what's required to make it happen.
+
+---
+
+## 6. The split
+<!-- Brief: where the seam is, what crosses it, whether ADR-2 held, and why it moved if it did. -->
+* **Date:** 
+* **Status:** Decided
+* **Context:** 
+* **Decision:** 
+* **Alternatives considered:** 
+* **Consequences:** 
+
+---
+
+## 7. Data and migrations
+<!-- Brief: how data moved from one database to one per service, what integrity was lost at the seam and how it is compensated, recovery plan for a bad migration. -->
+* **Date:** 
+* **Status:** Decided
+* **Context:** 
+* **Decision:** 
+* **Alternatives considered:** 
+* **Consequences:** 
+
+---
+
+## 8. Serverless hosting on Azure
+<!-- Brief: Azure resources used and their cost model; scale-to-zero consequences for containers and database (cold starts, DB resuming from pause, connection retries, migrations at startup with one replica); changes needed at 100x traffic. -->
+* **Date:** 
+* **Status:** Decided
+* **Context:** 
+* **Decision:** 
+* **Alternatives considered:** 
+* **Consequences:** 
+
+---
+
+## 9. Pipeline and testing
+<!-- Brief: what CI gates on and why, how the cross-seam test works, what is deliberately not tested. -->
+* **Date:** 
+* **Status:** Decided
+* **Context:** 
+* **Decision:** 
+* **Alternatives considered:** 
+* **Consequences:** 
+
+---
+
+## 10. What is deliberately not built
+<!-- Brief: one thing deliberately not built (from section 1c or elsewhere) and the conditions under which it would be worth building. -->
+* **Date:** 
+* **Status:** Decided
+* **Context:** 
+* **Decision:** 
+* **Alternatives considered:** 
+* **Consequences:** 

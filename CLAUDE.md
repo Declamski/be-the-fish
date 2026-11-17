@@ -133,7 +133,17 @@ Each service folder will hold: its package(s), `app.py`, `config.py`, `db.py`,
 - **Out of scope:** VMs, App Service plans, AKS, Redis/queues/Service Bus, background job
   runners, any other DB, a third container (gateway/frontend), ACR without justification.
 
-## 6. Conventions (unchanged from A1)
+## 6. Commands (run inside the service folder)
+
+```bash
+cd services/sites && PORT=8001 uv run python app.py           # sites on :8001
+cd services/dives && SITES_URL=http://localhost:8001 uv run python app.py   # dives on :8000
+cd services/dives && uv run pytest --cov=dives --cov=feed --cov-report=term-missing
+cd services/sites && uv run pytest --cov=sites --cov-report=term-missing
+```
+Dives tests replace the sites HTTP calls with `FAKE_SITES` (`services/dives/tests/conftest.py`).
+
+## 7. Conventions (unchanged from A1)
 
 - Units in column names: `max_depth_m`, `duration_s`, `water_temp_c`, `weight_kg`. SI units.
 - Timestamps: ISO 8601 in the diver's local time, no timezone suffix (`started_at`).

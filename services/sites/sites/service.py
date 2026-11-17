@@ -108,7 +108,18 @@ def get_site(conn, site_id):
     return site
 
 
-# --- Public functions for other domains (the seam for Assignment 2) ---
+def site_to_dict(site):
+    """A site as plain data for the JSON API, with its label, e.g. "Blue Hole - Gozo, Malta"."""
+    return {
+        "id": site["id"],
+        "name": site["name"],
+        "location": site["location"],
+        "description": site["description"],
+        "label": site["name"] + " - " + site["location"],
+    }
+
+
+# --- Lookups by id (dives now reaches these through the JSON API, not by import) ---
 
 def site_exists(conn, site_id):
     return repository.get_site(conn, site_id) is not None

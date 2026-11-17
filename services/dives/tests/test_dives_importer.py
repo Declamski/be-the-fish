@@ -13,7 +13,8 @@ FIXTURE = os.path.join(os.path.dirname(__file__), "fixtures", "subsurface_export
 @pytest.fixture
 def conn(tmp_path):
     data_dir = str(tmp_path)
-    create_app({"PORT": 8000, "DATA_DIR": data_dir, "SECRET_KEY": "test"})
+    create_app({"PORT": 8000, "DATA_DIR": data_dir, "SECRET_KEY": "test",
+                "SITES_URL": "http://sites.invalid", "SITES_TIMEOUT_S": 1})
     connection = get_connection(data_dir)
     yield connection
     connection.close()

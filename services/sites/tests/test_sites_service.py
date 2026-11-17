@@ -8,7 +8,7 @@ from sites import repository, service
 @pytest.fixture
 def conn(tmp_path):
     data_dir = str(tmp_path)
-    create_app({"PORT": 8000, "DATA_DIR": data_dir, "SECRET_KEY": "test"})
+    create_app({"PORT": 8000, "DATA_DIR": data_dir})
     connection = get_connection(data_dir)
     yield connection
     connection.close()
@@ -113,3 +113,17 @@ def test_get_site(conn):
 def test_get_site_unknown_site(conn):
     with pytest.raises(ValueError):
         service.get_site(conn, 9999)
+
+
+# --- site_to_dict (what the JSON API returns to the dives service) ---
+
+def test_site_to_dict_has_label(conn):
+    site_id = service.create_site(conn, name="Test Reef", location="Testland", description="Nice")
+    site = service.get_site(conn, site_id)
+    assert service.site_to_dict(site) == {
+        "id": site_id,
+        "name": "Test Reef",
+        "location": "Testland",
+        "description": "Nice",
+        "label": "Test Reef - Testland",
+    }

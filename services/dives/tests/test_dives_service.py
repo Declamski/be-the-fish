@@ -4,13 +4,14 @@ import users
 from app import create_app
 from db import get_connection
 from dives import service
-from sites.service import SEED_SITES
+from conftest import FAKE_SITES
 
 
 @pytest.fixture
 def conn(tmp_path):
     data_dir = str(tmp_path)
-    create_app({"PORT": 8000, "DATA_DIR": data_dir, "SECRET_KEY": "test"})
+    create_app({"PORT": 8000, "DATA_DIR": data_dir, "SECRET_KEY": "test",
+                "SITES_URL": "http://sites.invalid", "SITES_TIMEOUT_S": 1})
     connection = get_connection(data_dir)
     yield connection
     connection.close()
@@ -140,7 +141,7 @@ def test_get_dive_detail_rejects_other_users_dive(conn):
 
 
 # --- site and conditions ---
-# The test database is seeded with SEED_SITES at startup, so site 1 exists.
+# The fake_sites fixture makes sites 1-3 exist; 9999 does not.
 
 def make_scuba_dive(conn, user_id=1):
     return service.create_scuba_dive(
@@ -259,7 +260,7 @@ def test_get_site_choices_lists_every_site_with_label(conn):
     labels = [choice["label"] for choice in choices]
     assert "Blue Hole - Dahab, Egypt" in labels
     assert "Blue Hole - Gozo, Malta" in labels
-    assert len(choices) == len(SEED_SITES)
+    assert len(choices) == len(FAKE_SITES)
 
 
 # --- audience: who can see a dive ---

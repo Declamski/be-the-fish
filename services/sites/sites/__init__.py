@@ -1,3 +1,3 @@
 from .repository import init_db
 from .service import seed_sites
-from .routes import bp
+from .routes import bp, api_bp

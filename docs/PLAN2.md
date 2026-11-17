@@ -29,6 +29,10 @@ Deadline **Sun 2026-11-22 23:59 (Madrid)**. Work on branch `a2-split`, merge to 
 - Users, kudos, comments live in the dives DB.
 - Auth: token in a header, not cookies (UI and services on different origins).
 - Migrations: numbered SQL files with our own runner.
+- Dives → sites goes through `dives/sites_client.py` over HTTP from the start (no stub),
+  stdlib `urllib.request` (no `requests`), sites exposes `GET /api/sites?q=` and
+  `GET /api/sites/<id>`. Each service has its own copy of `app.py`/`config.py`/`db.py`
+  (no shared package). Jinja pages stay in both services until the static UI on Fri.
 - `CLAUDE.md` and `docs/` are tracked in git for A2 (they were gitignored in A1).
 
 ## Open — student decides, then writes the ADR
@@ -40,8 +44,6 @@ Deadline **Sun 2026-11-22 23:59 (Madrid)**. Work on branch `a2-split`, merge to 
 - ADR-8: infra as Azure CLI in the workflow vs Bicep/Terraform; cold-start + retry strategy; 100x.
 - ADR-9: cross-seam test against compose stack vs stubbed sites; lint tool; what is not tested.
 - ADR-10: what is deliberately not built (gateway, cache of sites, message queue, …).
-- Today's commit 2: how dives calls sites before the HTTP client exists (temporary stub vs
-  early HTTP client).
 - Token format for auth (signed token via Flask's `itsdangerous` vs random token stored in DB).
 
 ## Still needed from outside
@@ -54,3 +56,8 @@ Deadline **Sun 2026-11-22 23:59 (Madrid)**. Work on branch `a2-split`, merge to 
 ## Status log
 - 2026-11-17: read the brief; docs set up (CLAUDE.md for A2, ASSIGNMENT2.md, PLAN2.md, A1 docs
   moved to `docs/a1/`, .gitignore updated).
+- 2026-11-17: split into `services/dives` (dives, feed, users; `dives.db`) and `services/sites`
+  (sites; `sites.db`), each with own pyproject/uv.lock (same versions as A1). Dives calls sites
+  over HTTP via `sites_client.py`; tests use a fake. 129 tests pass (dives 111, 71%; sites 18,
+  79%). Not yet: handling sites being down (dive pages 500 if sites is stopped) — Thu.
+  Root README still describes the A1 monolith — rewrite Sun.

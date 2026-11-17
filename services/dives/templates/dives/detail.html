@@ -4,7 +4,7 @@
 <p class="card-meta">{% if is_owner %}Your dive &middot; {{ dive.audience }}{% else %}Logged by {{ owner_name }}{% endif %}</p>
 <h1>{{ dive.started_at | datetime }}</h1>
 <p><span class="badge">{{ dive.discipline }}</span>
-    {% if site_label %}<a href="/sites/{{ dive.site_id }}">{{ site_label }}</a>{% else %}<span class="muted">No site</span>{% endif %}</p>
+    {% if site_label %}<a href="{{ sites_url }}/sites/{{ dive.site_id }}">{{ site_label }}</a>{% else %}<span class="muted">No site</span>{% endif %}</p>
 {% if error %}<p class="error">{{ error }}</p>{% endif %}
 
 <div class="card">

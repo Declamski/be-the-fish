@@ -1,7 +1,6 @@
 import users
-from sites import service as sites_service
 
-from . import repository
+from . import repository, sites_client
 
 VALID_DISCIPLINES = {"scuba", "freedive", "spearfishing"}
 SESSION_DISCIPLINES = {"freedive", "spearfishing"}
@@ -29,8 +28,8 @@ def can_view_dive(conn, dive, viewer_id):
 
 def check_site_and_conditions(conn, site_id, visibility, current):
     """All three are optional. Raise ValueError if any given value is not allowed."""
-    # Sites belong to another domain, so we ask its service instead of querying its table.
-    if site_id is not None and not sites_service.site_exists(conn, site_id):
+    # Sites belong to another service, so we ask its API instead of querying its table.
+    if site_id is not None and not sites_client.site_exists(site_id):
         raise ValueError("That dive site does not exist")
     if visibility is not None and visibility not in VALID_VISIBILITY:
         raise ValueError("Visibility must be one of: " + ", ".join(VALID_VISIBILITY))
@@ -173,8 +172,9 @@ def list_dives(conn, user_id):
 def get_site_choices(conn):
     """Every dive site as {"id", "label"}, for the site dropdown on the dive forms."""
     choices = []
-    for site in sites_service.search_sites(conn, ""):
-        choices.append({"id": site["id"], "label": sites_service.get_site_label(conn, site["id"])})
+    # One HTTP call for the whole list; each site already comes with its label.
+    for site in sites_client.search_sites(""):
+        choices.append({"id": site["id"], "label": site["label"]})
     return choices
 
 
@@ -187,7 +187,7 @@ def get_dive_detail(conn, dive_id, viewer_id):
 
     site_label = None
     if dive["site_id"] is not None:
-        site_label = sites_service.get_site_label(conn, dive["site_id"])
+        site_label = sites_client.get_site_label(dive["site_id"])
 
     return {
         "dive": dive,
@@ -227,7 +227,7 @@ def list_feed_dives(conn, viewer_id, offset, limit):
     for dive in page:
         site_label = None
         if dive["site_id"] is not None:
-            site_label = sites_service.get_site_label(conn, dive["site_id"])
+            site_label = sites_client.get_site_label(dive["site_id"])
         dives.append({
             "id": dive["id"],
             "user_id": dive["user_id"],
