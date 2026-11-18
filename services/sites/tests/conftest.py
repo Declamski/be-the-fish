@@ -37,7 +37,7 @@ def app():
         pytest.skip("TEST_DATABASE_URL is not set: these tests need a SQL Server test database")
     create_test_database()
     # Runs the migrations and the seeding, like a real start.
-    return create_app({"PORT": 8000, "DATABASE_URL": TEST_DATABASE_URL})
+    return create_app({"PORT": 8000, "VERSION": "test", "DATABASE_URL": TEST_DATABASE_URL})
 
 
 @pytest.fixture

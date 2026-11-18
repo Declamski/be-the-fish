@@ -158,6 +158,11 @@ cd services/sites && TEST_DATABASE_URL=mssql://sa:...@localhost:1433/sites_test 
 - Schema changes = a NEW file `migrations/NNN_name.sql`, applied at startup by `migrate.py`.
   Never edit an applied migration. Note: in one batch, SQL Server cannot ALTER TABLE ADD a
   column and then use that column in the same file (compile error) — split or use `EXEC`.
+- **New top-level file or folder in a service → add it to that service's Dockerfile COPY lines**
+  (no `COPY . .`). Tests pass without it; only the container fails (`ModuleNotFoundError`).
+- `GET /health` (`health.py`) uses `db.connect_once` (one try, 5 s) so it answers 503 fast;
+  every other request uses `db.get_connection` (retries ~1 min). Request log = `log_request`
+  in `app.py`; Flask's own werkzeug request log is silenced.
 - SQL helpers live in each service's `db.py`: `query_one`, `query_all`, `execute`, `insert`
   (INSERT must contain `OUTPUT INSERTED.id`). Placeholders are `%s`.
 

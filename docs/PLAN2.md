@@ -76,3 +76,7 @@ Deadline **Sun 2026-11-22 23:59 (Madrid)**. Work on branch `a2-split`, merge to 
   stack up, seam over compose network, non-root, login isolation, restart keeps data.
   Known: dives pages link to `SITES_URL` (http://sites:8000) which the browser can't open
   under compose — fixed by the static UI on Fri. No `ui` (nginx) service until Fri.
+- 2026-11-18: `/health` (`health.py`: one quick connection, UPDATE + SELECT on `health_check`,
+  200/503 JSON with `VERSION`), one stdout line per request (`log_request`), werkzeug log
+  silenced, startup line. Tests: dives 120, sites 27. Compose: health 200; sites stopped →
+  dives health still 200; SQL Server stopped → 503 in 0.09 s.

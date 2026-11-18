@@ -34,6 +34,13 @@ def get_connection(database_url):
     return pymssql.connect(**args)
 
 
+def connect_once(database_url):
+    """One quick connection attempt, no retries. Used by GET /health, which must
+    answer straight away with 503 instead of waiting a minute for the database."""
+    args = parse_database_url(database_url)
+    return pymssql.connect(**args, login_timeout=5)
+
+
 # --- Small helpers so the repositories don't repeat cursor code ---
 
 def query_one(conn, sql, params=None):
