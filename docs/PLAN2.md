@@ -61,3 +61,11 @@ Deadline **Sun 2026-11-22 23:59 (Madrid)**. Work on branch `a2-split`, merge to 
   over HTTP via `sites_client.py`; tests use a fake. 129 tests pass (dives 111, 71%; sites 18,
   79%). Not yet: handling sites being down (dive pages 500 if sites is stopped) — Thu.
   Root README still describes the A1 monolith — rewrite Sun.
+- 2026-11-18: SQL Server port (pymssql 2.4.6 in both services). `db.py` per service: parses
+  DATABASE_URL, connects with retries (waits 1,2,4,8,15,30 s ~ 1 min for Azure resume) and
+  query helpers. `migrate.py` + `migrations/001_init.sql` per service, `schema_migrations`.
+  `dives.current` → `current_level` (CURRENT is reserved). `external_id` unique via filtered
+  index. Dates stay NVARCHAR. `health_check` table in 001. Tests on a SQL Server test DB
+  (TEST_DATABASE_URL): dives 115 pass, sites 22 pass.
+  Gaps: SECRET_KEY still has a default (replaced by token auth Thu); NVARCHAR limits on
+  name/species/notes are not validated in services (too-long input → DB error).

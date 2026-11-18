@@ -135,13 +135,26 @@ Each service folder will hold: its package(s), `app.py`, `config.py`, `db.py`,
 
 ## 6. Commands (run inside the service folder)
 
+Needs a SQL Server reachable at the URLs below (compose or a local container).
+`DATABASE_URL` / `TEST_DATABASE_URL` format: `mssql://user:password@host:port/database`.
+Never write a real password into a file — pass it in the shell.
+
 ```bash
-cd services/sites && PORT=8001 uv run python app.py           # sites on :8001
-cd services/dives && SITES_URL=http://localhost:8001 uv run python app.py   # dives on :8000
-cd services/dives && uv run pytest --cov=dives --cov=feed --cov-report=term-missing
-cd services/sites && uv run pytest --cov=sites --cov-report=term-missing
+cd services/sites && PORT=8001 DATABASE_URL=... uv run python app.py
+cd services/dives && DATABASE_URL=... SITES_URL=http://localhost:8001 uv run python app.py
+cd services/dives && TEST_DATABASE_URL=mssql://sa:...@localhost:1433/dives_test \
+    uv run pytest --cov=dives --cov=feed --cov=users --cov=migrate --cov=db --cov-report=term-missing
+cd services/sites && TEST_DATABASE_URL=mssql://sa:...@localhost:1433/sites_test \
+    uv run pytest --cov=sites --cov=migrate --cov=db --cov-report=term-missing
 ```
-Dives tests replace the sites HTTP calls with `FAKE_SITES` (`services/dives/tests/conftest.py`).
+- Tests create the test DB if missing, migrate it once, and empty the tables before each test
+  (`tests/conftest.py`). Without `TEST_DATABASE_URL` the DB tests are skipped.
+- Dives tests replace the sites HTTP calls with `FAKE_SITES` (`services/dives/tests/conftest.py`).
+- Schema changes = a NEW file `migrations/NNN_name.sql`, applied at startup by `migrate.py`.
+  Never edit an applied migration. Note: in one batch, SQL Server cannot ALTER TABLE ADD a
+  column and then use that column in the same file (compile error) — split or use `EXEC`.
+- SQL helpers live in each service's `db.py`: `query_one`, `query_all`, `execute`, `insert`
+  (INSERT must contain `OUTPUT INSERTED.id`). Placeholders are `%s`.
 
 ## 7. Conventions (unchanged from A1)
 

@@ -1,17 +1,8 @@
 import pytest
 
-from app import create_app
-from db import get_connection
 from sites import repository, service
 
-
-@pytest.fixture
-def conn(tmp_path):
-    data_dir = str(tmp_path)
-    create_app({"PORT": 8000, "DATA_DIR": data_dir})
-    connection = get_connection(data_dir)
-    yield connection
-    connection.close()
+# The conn fixture is in conftest.py: an empty test database with the seed sites.
 
 
 # --- create_site ---

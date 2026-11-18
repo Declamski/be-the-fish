@@ -1,6 +1,7 @@
 import flask
 from config import load_config
-from db import init_db, get_connection
+import db
+import migrate
 import users
 import dives
 import feed
@@ -13,22 +14,25 @@ def create_app(config=None):
     if config is None:
         config = load_config()
 
-    app.config["DATA_DIR"] = config["DATA_DIR"]
+    app.config["DATABASE_URL"] = config["DATABASE_URL"]
     app.config["SECRET_KEY"] = config["SECRET_KEY"]
     app.config["SITES_URL"] = config["SITES_URL"]
     app.config["SITES_TIMEOUT_S"] = config["SITES_TIMEOUT_S"]
 
-    init_db(app.config["DATA_DIR"])
+    # On startup: bring the schema up to date.
+    conn = db.get_connection(app.config["DATABASE_URL"])
+    migrate.apply_migrations(conn)
+    conn.close()
 
     @app.before_request
     def open_db_connection():
-        flask.g.db = get_connection(app.config["DATA_DIR"])
+        flask.g.db = db.get_connection(app.config["DATABASE_URL"])
 
     @app.teardown_request
     def close_db_connection(exception):
-        db = getattr(flask.g, "db", None)
-        if db is not None:
-            db.close()
+        conn = getattr(flask.g, "db", None)
+        if conn is not None:
+            conn.close()
 
     app.register_blueprint(users.bp)
     app.register_blueprint(dives.bp)

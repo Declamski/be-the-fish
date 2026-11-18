@@ -1,20 +1,11 @@
 import pytest
 
 import users
-from app import create_app
-from db import get_connection
 from dives import service
 from conftest import FAKE_SITES
 
 
-@pytest.fixture
-def conn(tmp_path):
-    data_dir = str(tmp_path)
-    create_app({"PORT": 8000, "DATA_DIR": data_dir, "SECRET_KEY": "test",
-                "SITES_URL": "http://sites.invalid", "SITES_TIMEOUT_S": 1})
-    connection = get_connection(data_dir)
-    yield connection
-    connection.close()
+# The conn fixture is in conftest.py: an empty SQL Server test database.
 
 
 def test_create_scuba_dive_valid(conn):
@@ -157,7 +148,7 @@ def test_create_scuba_dive_with_site_and_conditions(conn):
     )
     detail = service.get_dive_detail(conn, dive_id, viewer_id=1)
     assert detail["dive"]["visibility"] == "good"
-    assert detail["dive"]["current"] == "light"
+    assert detail["dive"]["current_level"] == "light"
     assert detail["site_label"] == "Bloody Bay Wall - Little Cayman, Cayman Islands"
 
 
@@ -203,7 +194,7 @@ def test_finish_session_saves_site_and_conditions(conn):
     dive = service.get_dive_detail(conn, dive_id, viewer_id=1)["dive"]
     assert dive["site_id"] == 1
     assert dive["visibility"] == "excellent"
-    assert dive["current"] == "none"
+    assert dive["current_level"] == "none"
 
 
 def test_finish_session_rejects_unknown_site(conn):
@@ -223,7 +214,7 @@ def test_set_dive_site_and_conditions(conn):
     detail = service.get_dive_detail(conn, dive_id, viewer_id=1)
     assert detail["dive"]["site_id"] == 2
     assert detail["dive"]["visibility"] == "poor"
-    assert detail["dive"]["current"] == "strong"
+    assert detail["dive"]["current_level"] == "strong"
 
 
 def test_set_dive_site_and_conditions_can_clear_them(conn):

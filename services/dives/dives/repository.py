@@ -1,104 +1,97 @@
-import os
-
-
-def init_db(conn):
-    schema_path = os.path.join(os.path.dirname(__file__), "schema.sql")
-    with open(schema_path) as f:
-        conn.executescript(f.read())
-    conn.commit()
+import db
 
 
 def insert_dive(conn, user_id, discipline, started_at, site_id=None, source_device=None,
                  external_id=None, max_depth_m=None, duration_s=None, water_temp_c=None,
                  visibility=None, current=None, audience="private", notes=None):
-    cursor = conn.execute(
+    return db.insert(
+        conn,
         """
         INSERT INTO dives (user_id, site_id, source_device, external_id, started_at,
                             discipline, max_depth_m, duration_s, water_temp_c,
-                            visibility, current, audience, notes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            visibility, current_level, audience, notes)
+        OUTPUT INSERTED.id
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """,
         (user_id, site_id, source_device, external_id, started_at, discipline,
          max_depth_m, duration_s, water_temp_c, visibility, current, audience, notes),
     )
-    conn.commit()
-    return cursor.lastrowid
 
 
 def get_dive(conn, dive_id):
-    return conn.execute("SELECT * FROM dives WHERE id = ?", (dive_id,)).fetchone()
+    return db.query_one(conn, "SELECT * FROM dives WHERE id = %s", (dive_id,))
 
 
 def list_dives_for_user(conn, user_id):
-    return conn.execute(
-        "SELECT * FROM dives WHERE user_id = ? ORDER BY started_at DESC", (user_id,)
-    ).fetchall()
+    return db.query_all(
+        conn, "SELECT * FROM dives WHERE user_id = %s ORDER BY started_at DESC", (user_id,)
+    )
 
 
 def update_dive_aggregates(conn, dive_id, max_depth_m, duration_s):
-    conn.execute(
-        "UPDATE dives SET max_depth_m = ?, duration_s = ? WHERE id = ?",
+    db.execute(
+        conn,
+        "UPDATE dives SET max_depth_m = %s, duration_s = %s WHERE id = %s",
         (max_depth_m, duration_s, dive_id),
     )
-    conn.commit()
 
 
 def update_dive_site_and_conditions(conn, dive_id, site_id, visibility, current):
-    conn.execute(
-        "UPDATE dives SET site_id = ?, visibility = ?, current = ? WHERE id = ?",
+    db.execute(
+        conn,
+        "UPDATE dives SET site_id = %s, visibility = %s, current_level = %s WHERE id = %s",
         (site_id, visibility, current, dive_id),
     )
-    conn.commit()
 
 
 def update_dive_audience(conn, dive_id, audience):
-    conn.execute("UPDATE dives SET audience = ? WHERE id = ?", (audience, dive_id))
-    conn.commit()
+    db.execute(conn, "UPDATE dives SET audience = %s WHERE id = %s", (audience, dive_id))
 
 
 def insert_descent(conn, dive_id, depth_m, duration_s, started_at=None):
-    cursor = conn.execute(
-        "INSERT INTO descents (dive_id, depth_m, duration_s, started_at) VALUES (?, ?, ?, ?)",
+    return db.insert(
+        conn,
+        """
+        INSERT INTO descents (dive_id, depth_m, duration_s, started_at)
+        OUTPUT INSERTED.id
+        VALUES (%s, %s, %s, %s)
+        """,
         (dive_id, depth_m, duration_s, started_at),
     )
-    conn.commit()
-    return cursor.lastrowid
 
 
 def list_descents(conn, dive_id):
-    return conn.execute(
-        "SELECT * FROM descents WHERE dive_id = ? ORDER BY id", (dive_id,)
-    ).fetchall()
+    return db.query_all(
+        conn, "SELECT * FROM descents WHERE dive_id = %s ORDER BY id", (dive_id,)
+    )
 
 
 def insert_catch(conn, dive_id, species, weight_kg=None):
-    cursor = conn.execute(
-        "INSERT INTO catches (dive_id, species, weight_kg) VALUES (?, ?, ?)",
+    return db.insert(
+        conn,
+        "INSERT INTO catches (dive_id, species, weight_kg) OUTPUT INSERTED.id VALUES (%s, %s, %s)",
         (dive_id, species, weight_kg),
     )
-    conn.commit()
-    return cursor.lastrowid
 
 
 def list_catches(conn, dive_id):
-    return conn.execute(
-        "SELECT * FROM catches WHERE dive_id = ? ORDER BY id", (dive_id,)
-    ).fetchall()
+    return db.query_all(
+        conn, "SELECT * FROM catches WHERE dive_id = %s ORDER BY id", (dive_id,)
+    )
 
 
 def list_shared_and_own_dives(conn, user_id):
     """Every dive that is not private, plus all of this user's own dives, newest first."""
-    return conn.execute(
+    return db.query_all(
+        conn,
         """
         SELECT * FROM dives
-        WHERE audience != 'private' OR user_id = ?
+        WHERE audience != 'private' OR user_id = %s
         ORDER BY started_at DESC, id DESC
         """,
         (user_id,),
-    ).fetchall()
+    )
 
 
 def get_dive_by_external_id(conn, external_id):
-    return conn.execute(
-        "SELECT * FROM dives WHERE external_id = ?", (external_id,)
-    ).fetchone()
+    return db.query_one(conn, "SELECT * FROM dives WHERE external_id = %s", (external_id,))

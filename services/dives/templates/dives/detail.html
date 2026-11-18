@@ -13,7 +13,7 @@
         <div><span class="stat-label">{% if descents %}Total time{% else %}Time{% endif %}</span><span class="stat-value">{{ dive.duration_s | duration }}</span></div>
         <div><span class="stat-label">Water</span><span class="stat-value">{{ dive.water_temp_c | number("°C") }}</span></div>
         <div><span class="stat-label">Visibility</span><span class="stat-value">{{ dive.visibility or "-" }}</span></div>
-        <div><span class="stat-label">Current</span><span class="stat-value">{{ dive.current or "-" }}</span></div>
+        <div><span class="stat-label">Current</span><span class="stat-value">{{ dive.current_level or "-" }}</span></div>
     </div>
     {% if dive.notes %}<p>{{ dive.notes }}</p>{% endif %}
 </div>

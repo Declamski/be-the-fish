@@ -3,33 +3,9 @@ import functools
 import flask
 from werkzeug.security import generate_password_hash, check_password_hash
 
+import db
+
 bp = flask.Blueprint("users", __name__)
-
-SCHEMA_SQL = """
-CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE NOT NULL,
-    name TEXT NOT NULL,
-    password_hash TEXT NOT NULL
-);
-
--- One row per pair of users. A request starts as 'pending' and becomes
--- 'accepted' when the other person accepts. Declining, cancelling and
--- unfriending all delete the row.
-CREATE TABLE IF NOT EXISTS friendships (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    requester_id INTEGER NOT NULL,
-    addressee_id INTEGER NOT NULL,
-    status TEXT NOT NULL,
-    FOREIGN KEY (requester_id) REFERENCES users(id),
-    FOREIGN KEY (addressee_id) REFERENCES users(id)
-);
-"""
-
-
-def init_db(conn):
-    conn.executescript(SCHEMA_SQL)
-    conn.commit()
 
 
 def create_user(conn, email, name, password):
@@ -43,26 +19,23 @@ def create_user(conn, email, name, password):
     if len(password) < 8:
         raise ValueError("Password must be at least 8 characters")
 
-    existing = conn.execute(
-        "SELECT id FROM users WHERE email = ?", (email,)
-    ).fetchone()
+    existing = db.query_one(conn, "SELECT id FROM users WHERE email = %s", (email,))
     if existing is not None:
         raise ValueError("An account with this email already exists")
 
     password_hash = generate_password_hash(password)
-    cursor = conn.execute(
-        "INSERT INTO users (email, name, password_hash) VALUES (?, ?, ?)",
+    return db.insert(
+        conn,
+        "INSERT INTO users (email, name, password_hash) OUTPUT INSERTED.id VALUES (%s, %s, %s)",
         (email, name, password_hash),
     )
-    conn.commit()
-    return cursor.lastrowid
 
 
 def authenticate(conn, email, password):
     email = email.strip().lower()
-    row = conn.execute(
-        "SELECT id, email, name, password_hash FROM users WHERE email = ?", (email,)
-    ).fetchone()
+    row = db.query_one(
+        conn, "SELECT id, email, name, password_hash FROM users WHERE email = %s", (email,)
+    )
     if row is None:
         return None
     if not check_password_hash(row["password_hash"], password):
@@ -78,16 +51,14 @@ def get_current_user(conn):
     user_id = flask.session.get("user_id")
     if user_id is None:
         return None
-    row = conn.execute(
-        "SELECT id, email, name FROM users WHERE id = ?", (user_id,)
-    ).fetchone()
+    row = db.query_one(conn, "SELECT id, email, name FROM users WHERE id = %s", (user_id,))
     if row is None:
         return None
     return {"id": row["id"], "email": row["email"], "name": row["name"]}
 
 
 def get_user_name(conn, user_id):
-    row = conn.execute("SELECT name FROM users WHERE id = ?", (user_id,)).fetchone()
+    row = db.query_one(conn, "SELECT name FROM users WHERE id = %s", (user_id,))
     if row is None:
         return None
     return row["name"]
@@ -97,14 +68,15 @@ def get_user_name(conn, user_id):
 
 def get_friendship(conn, user_id, other_id):
     """The friendships row between two users, whichever of them sent the request."""
-    return conn.execute(
+    return db.query_one(
+        conn,
         """
         SELECT * FROM friendships
-        WHERE (requester_id = ? AND addressee_id = ?)
-           OR (requester_id = ? AND addressee_id = ?)
+        WHERE (requester_id = %s AND addressee_id = %s)
+           OR (requester_id = %s AND addressee_id = %s)
         """,
         (user_id, other_id, other_id, user_id),
-    ).fetchone()
+    )
 
 
 def get_friend_status(conn, user_id, other_id):
@@ -129,9 +101,7 @@ def search_users(conn, user_id, query):
         return []
     query = query.strip().lower()
 
-    rows = conn.execute(
-        "SELECT id, name FROM users WHERE id != ? ORDER BY name", (user_id,)
-    ).fetchall()
+    rows = db.query_all(conn, "SELECT id, name FROM users WHERE id != %s ORDER BY name", (user_id,))
 
     matches = []
     for row in rows:
@@ -158,11 +128,11 @@ def send_friend_request(conn, user_id, other_id):
     if status == "received":
         raise ValueError("This person already sent you a request - accept it instead")
 
-    conn.execute(
-        "INSERT INTO friendships (requester_id, addressee_id, status) VALUES (?, ?, 'pending')",
+    db.execute(
+        conn,
+        "INSERT INTO friendships (requester_id, addressee_id, status) VALUES (%s, %s, 'pending')",
         (user_id, other_id),
     )
-    conn.commit()
 
 
 def accept_friend_request(conn, user_id, other_id):
@@ -170,11 +140,11 @@ def accept_friend_request(conn, user_id, other_id):
     if get_friend_status(conn, user_id, other_id) != "received":
         raise ValueError("There is no friend request from this person")
 
-    conn.execute(
-        "UPDATE friendships SET status = 'accepted' WHERE requester_id = ? AND addressee_id = ?",
+    db.execute(
+        conn,
+        "UPDATE friendships SET status = 'accepted' WHERE requester_id = %s AND addressee_id = %s",
         (other_id, user_id),
     )
-    conn.commit()
 
 
 def remove_friend(conn, user_id, other_id):
@@ -183,18 +153,18 @@ def remove_friend(conn, user_id, other_id):
     if row is None:
         raise ValueError("There is no friend request or friendship with this person")
 
-    conn.execute("DELETE FROM friendships WHERE id = ?", (row["id"],))
-    conn.commit()
+    db.execute(conn, "DELETE FROM friendships WHERE id = %s", (row["id"],))
 
 
 def list_friends(conn, user_id):
-    rows = conn.execute(
+    rows = db.query_all(
+        conn,
         """
         SELECT requester_id, addressee_id FROM friendships
-        WHERE status = 'accepted' AND (requester_id = ? OR addressee_id = ?)
+        WHERE status = 'accepted' AND (requester_id = %s OR addressee_id = %s)
         """,
         (user_id, user_id),
-    ).fetchall()
+    )
 
     friends = []
     for row in rows:
@@ -210,27 +180,29 @@ def list_friends(conn, user_id):
 
 
 def list_incoming_requests(conn, user_id):
-    return conn.execute(
+    return db.query_all(
+        conn,
         """
         SELECT users.id, users.name FROM friendships
         JOIN users ON users.id = friendships.requester_id
-        WHERE friendships.addressee_id = ? AND friendships.status = 'pending'
+        WHERE friendships.addressee_id = %s AND friendships.status = 'pending'
         ORDER BY users.name
         """,
         (user_id,),
-    ).fetchall()
+    )
 
 
 def list_outgoing_requests(conn, user_id):
-    return conn.execute(
+    return db.query_all(
+        conn,
         """
         SELECT users.id, users.name FROM friendships
         JOIN users ON users.id = friendships.addressee_id
-        WHERE friendships.requester_id = ? AND friendships.status = 'pending'
+        WHERE friendships.requester_id = %s AND friendships.status = 'pending'
         ORDER BY users.name
         """,
         (user_id,),
-    ).fetchall()
+    )
 
 
 def login_required(view_func):

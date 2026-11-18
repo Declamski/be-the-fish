@@ -1,32 +1,25 @@
-import os
-
-
-def init_db(conn):
-    schema_path = os.path.join(os.path.dirname(__file__), "schema.sql")
-    with open(schema_path) as f:
-        conn.executescript(f.read())
-    conn.commit()
+import db
 
 
 def insert_site(conn, name, location, description=None):
-    cursor = conn.execute(
-        "INSERT INTO sites (name, location, description) VALUES (?, ?, ?)",
+    return db.insert(
+        conn,
+        "INSERT INTO sites (name, location, description) OUTPUT INSERTED.id VALUES (%s, %s, %s)",
         (name, location, description),
     )
-    conn.commit()
-    return cursor.lastrowid
 
 
 def get_site(conn, site_id):
-    return conn.execute("SELECT * FROM sites WHERE id = ?", (site_id,)).fetchone()
+    return db.query_one(conn, "SELECT * FROM sites WHERE id = %s", (site_id,))
 
 
 def find_site(conn, name, location):
-    return conn.execute(
-        "SELECT * FROM sites WHERE LOWER(name) = LOWER(?) AND LOWER(location) = LOWER(?)",
+    return db.query_one(
+        conn,
+        "SELECT * FROM sites WHERE LOWER(name) = LOWER(%s) AND LOWER(location) = LOWER(%s)",
         (name, location),
-    ).fetchone()
+    )
 
 
 def list_sites(conn):
-    return conn.execute("SELECT * FROM sites ORDER BY name, location").fetchall()
+    return db.query_all(conn, "SELECT * FROM sites ORDER BY name, location")
