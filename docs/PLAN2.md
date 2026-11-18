@@ -69,3 +69,10 @@ Deadline **Sun 2026-11-22 23:59 (Madrid)**. Work on branch `a2-split`, merge to 
   (TEST_DATABASE_URL): dives 115 pass, sites 22 pass.
   Gaps: SECRET_KEY still has a default (replaced by token auth Thu); NVARCHAR limits on
   name/species/notes are not validated in services (too-long input → DB error).
+- 2026-11-18: Dockerfiles (python:3.13-slim, uv 0.9.15 pinned, `uv sync --frozen --no-dev`, explicit
+  COPYs, non-root `app` user), `.dockerignore`, `docker-compose.yml` (sqlserver + one-off db-init
+  + sites + dives, named volume), `db/init.sql` (dives/sites DBs, dives_user/sites_user each
+  only in own DB), `.env.example` (passwords from gitignored .env — decision 5b). Verified:
+  stack up, seam over compose network, non-root, login isolation, restart keeps data.
+  Known: dives pages link to `SITES_URL` (http://sites:8000) which the browser can't open
+  under compose — fixed by the static UI on Fri. No `ui` (nginx) service until Fri.

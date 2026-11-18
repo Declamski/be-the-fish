@@ -133,9 +133,14 @@ Each service folder will hold: its package(s), `app.py`, `config.py`, `db.py`,
 - **Out of scope:** VMs, App Service plans, AKS, Redis/queues/Service Bus, background job
   runners, any other DB, a third container (gateway/frontend), ACR without justification.
 
-## 6. Commands (run inside the service folder)
+## 6. Commands
 
-Needs a SQL Server reachable at the URLs below (compose or a local container).
+Whole system (repo root): `cp .env.example .env`, fill in passwords, then
+`docker compose up --build` → dives http://localhost:8000, sites http://localhost:8001,
+SQL Server on 127.0.0.1:1433 (sa password from .env; also usable for TEST_DATABASE_URL).
+`docker compose down` keeps the data volume; never use `down -v` on data you need.
+
+Single service / tests (inside the service folder) need a SQL Server reachable at the URLs below (compose or a local container).
 `DATABASE_URL` / `TEST_DATABASE_URL` format: `mssql://user:password@host:port/database`.
 Never write a real password into a file — pass it in the shell.
 

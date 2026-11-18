@@ -7,6 +7,7 @@ docs/a1/
 # Secrets (never commit — see CLAUDE.md rule 6)
 .env
 .env.*
+!.env.example
 *.pem
 *.key
 
