@@ -134,6 +134,13 @@ the compose stack or with the other service stubbed (justify in ADR-9).
   Pushed to GitHub; push timestamps checked.
 
 ## 7. Azure deployment contract
+
+> **Overridden by `docs/a2-azure-deployment-guide.pdf`** (later than the PDF brief): the
+> individual assignment runs in your **own Azure for Students** subscription, in a resource
+> group you create (`rg-<prefix>`); the pipeline signs in as your own **managed identity** via
+> OIDC (no service principal); the UI is a **Storage static website**; SQL databases use the
+> **free offer** (60-min auto-pause, 32 GB fixed); give the professors Reader on the group.
+> The text below is the original brief — where it conflicts, the guide wins (see CLAUDE.md §5).
 - Shared subscription. Class resource group already exists: `rg-sdd-3a` or `rg-sdd-3b`. Create
   everything there; **never create resource groups**.
 - Pipeline signs in with the class service principal (Contributor on the class RG only; shared

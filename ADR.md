@@ -61,13 +61,12 @@
 ---
 
 ## 7. Data and migrations
-<!-- Brief: how data moved from one database to one per service, what integrity was lost at the seam and how it is compensated, recovery plan for a bad migration. -->
-* **Date:** 
+* **Date:** 2026-11-19
 * **Status:** Decided
-* **Context:** 
-* **Decision:** 
-* **Alternatives considered:** 
-* **Consequences:** 
+* **Context:** In Assignment 1 all tables were in one SQLite file and were created with `CREATE TABLE IF NOT EXISTS` on start. Assignment 2 needs one SQL Server database per service and a schema that can change while the database already holds data, so tables can't just be recreated anymore.
+* **Decision:** Each service has its own numbered SQL files in `migrations/` that `migrate.py` runs in order at startup, each one exactly once, and records in a `schema_migrations` table. The A1 tables were split by owner: users, friendships, dives, descents, catches, kudos and comments went into `dives`' `001_init.sql`, and sites went into `sites`' `001_init.sql`. No rows had to be moved because the A1 app was never deployed, so both Azure databases start empty and get their data through the app. If a migration goes wrong in production I fix it forward with a new migration, and only if data was actually lost or damaged I use Azure's point-in-time restore to go back to before the deploy.
+* **Alternatives considered:** Alembic: it would track migrations for me, but it brings in SQLAlchemy and a tool I would have to learn and explain, when my runner is one small file. Down migrations for every change: the brief allows forward only and writing an undo for each file doubles the work for something I would rarely use. Always restoring from backup: it throws away everything written after the backup, so it's only worth it when data is already damaged.
+* **Consequences:** `dives.site_id` can't be a foreign key anymore because sites live in another database, so the site is only checked through the sites API when a dive is saved; this is safe because sites are read-only and never deleted. Feed's kudos and comments still point at dives with plain ids like in A1. A migration that fails stops the service from starting instead of running half-applied, and because applied files are never edited, every database can always be rebuilt by running the same files in order.
 
 ---
 

@@ -51,13 +51,14 @@ Deadline **Sun 2026-11-22 23:59 (Madrid)**. Work on branch `a2-split`, merge to 
 - 2026-11-19: `az` logged in as dvandam.ieu2024@student.ie.edu, but NO access to rg-sdd-3a/3b
   (AuthorizationFailed). Only role: Owner on personal "Azure for Students" (not to be used).
   → refresh `az login` / ask professor for class RG access + service principal.
-- Class resource group (`rg-sdd-3a` / `rg-sdd-3b`).
+- ~~Class resource group~~ → not used: the deployment guide says own Azure for Students,
+  own `rg-dvandam-ieu2024`.
 - ~~`system.schema.json`~~ → added at repo root 2026-11-19.
-- **CONFLICT (ask professor):** the schema says the UI is an Azure **Storage static website**
+- **RESOLVED by the deployment guide (Storage static website):** the schema says the UI is an Azure **Storage static website**
   (`ui.storage_account`, required; name = prefix without hyphens + `ui` → `dvandamieu2024ui`),
   while the PDF says Azure **Static Web Apps** (`<prefix>-ui`). `static_web_app` fails schema
   validation (`additionalProperties: false`). Following the schema until told otherwise.
-- Class service principal credentials (GitHub secrets only).
+- ~~Class service principal~~ → own managed identity + OIDC (guide step 6).
 - GitHub repo is `Declamski/sdd-assignment1.py` (same repo as A1, required).
 
 ## Status log
@@ -98,3 +99,8 @@ Deadline **Sun 2026-11-22 23:59 (Madrid)**. Work on branch `a2-split`, merge to 
   with Flask). `SECRET_KEY` now required (no default). `CORS_ORIGIN` env var in both services.
   Tests: dives 146, sites 30. Verified in compose (token, 401, preflight headers).
   Coverage note: Jinja `routes.py` files pull the total down to 72%; they go on Fri.
+- 2026-11-19: `docs/a2-azure-deployment-guide.pdf` added (overrides the PDF brief for Azure):
+  own Azure for Students subscription, own RG, managed identity + OIDC, Storage static website,
+  free-offer SQL DBs, contained users, professors get Reader. Allowed regions: spaincentral,
+  belgiumcentral, austriaeast, italynorth, switzerlandnorth. Providers not registered yet.
+  `sqlcmd` not installed locally (use the mssql Docker image).

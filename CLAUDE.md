@@ -63,7 +63,7 @@ Detailed context — read the relevant one before working on that area:
    Local compose may use an obviously-local dev SA password only via env var substitution
    with no real credential committed — discuss with the student first. If a secret is ever
    committed, stop and tell the student: it must be revoked/rotated (or reported to the
-   professor if it is the class service principal) within 24h and recorded in the README.
+   professor if it is a credential they provided) within 24h and recorded in the README.
 7. **Never commit real dive data or GPS coordinates.** Real exports live in `imports/`, local
    data in `data/` — both gitignored. Test fixtures must be sanitised (see docs/DATA.md).
 8. **Dependencies:** ask before adding any third-party package. Soft cap ~12 per service.
@@ -78,8 +78,9 @@ Detailed context — read the relevant one before working on that area:
 - **SQL Server** with raw SQL through **pymssql**. No ORM. Azure SQL serverless on Azure,
   `mcr.microsoft.com/mssql/server:2022-latest` locally.
 - **Static UI** in `ui/` (HTML/CSS/vanilla JS), calls both services from the browser.
-  Hosting: `system.schema.json` says Azure **Storage static website** (`dvandamieu2024ui`),
-  the PDF says Static Web Apps — conflict open (docs/PLAN2.md). Follow the schema meanwhile.
+  Hosting: Azure **Storage static website** (`dvandamieu2024ui`), per the schema and the
+  deployment guide. The UI must handle a cold-start 503 ("App port is not ready") with a clear
+  "starting up, try again" message or a retry.
 - **`system.schema.json`** (repo root, from the professor) is the format `system.yaml` must
   pass in CI: every env var listed, secrets `secret: true` with no default.
 - Auth: **token in a request header** (not cookies) — UI and services are on different origins.
@@ -93,7 +94,7 @@ services/dives/   # dives + feed + users/auth. One container, one database (dive
                   # dives, feed, users stay separate packages; no domain imports another's
                   # repository (ADR-2 rule still applies inside the service).
 services/sites/   # sites only. Read-only seeded catalogue, no auth. Own database (sites-db).
-ui/               # static site → Azure Static Web App; nginx:alpine in compose (no Dockerfile)
+ui/               # static site → Azure Storage static website; nginx:alpine in compose (no Dockerfile)
 db/init.sql       # local only: idempotent creation of both databases + one login each
 docker-compose.yml  system.yaml  system.schema.json   # repo root
 .github/workflows/  # CI on every push/PR, CD on push to main
@@ -143,16 +144,34 @@ Each service folder will hold: its package(s), `app.py`, `config.py`, `db.py`,
   `openapi.yaml`; build every image. Tests use a SQL Server container — **CI never touches
   Azure SQL**.
 - **CD (push to main only, after CI passed on that commit):** push images to GHCR tagged with
-  the commit SHA; deploy to Azure Container Apps; deploy `ui/` to Static Web Apps with the
+  the commit SHA; deploy to Azure Container Apps; upload `ui/` to the storage account's `$web` container with the
   service URLs as config (`config.js` generated at deploy time); then poll `/health` and fail
   if not 200 in time.
-- **Azure:** shared class resource group (`rg-sdd-3a`/`3b` — not known yet). Every resource
-  prefixed with **`dvandam-ieu2024`** (IE username `dvandam.ieu2024`, dot → hyphen).
-  Personal "Azure for Students" subscription must NOT be used — class RG only.
-  Allowance: 2 Container Apps (Consumption, min 0 / max 1 replica), 1 SQL server
-  `<prefix>-sql` with 2 serverless DBs `<prefix>-<service>-db` (Gen5, 0.5–1 vCore,
-  shortest auto-pause, 2 GB, LRS backups), 1 Static Web App `<prefix>-ui`. Never create
-  resource groups or extra resources, never touch other students' resources.
+- **Azure (per docs/a2-azure-deployment-guide.pdf, which overrides the PDF brief):** the
+  student's OWN "Azure for Students" subscription. Prefix **`dvandam-ieu2024`**. Allowed regions
+  only: spaincentral, belgiumcentral, austriaeast, italynorth, switzerlandnorth (free SQL offer
+  is NOT in spaincentral). Resources, nothing else in the group:
+  - resource group `rg-dvandam-ieu2024`
+  - storage account `dvandamieu2024ui` (StorageV2, Standard_LRS, static website = the UI;
+    its web endpoint is the public URL and the only CORS origin)
+  - managed identity `dvandam-ieu2024-github` (Contributor on the RG only) + federated
+    credential for `repo:<owner>/<repo>:ref:refs/heads/main` (OIDC; also the numeric-ID form)
+  - Container Apps environment `dvandam-ieu2024-env` (+ its Log Analytics workspace), apps
+    `dvandam-ieu2024-dives` and `dvandam-ieu2024-sites`: external ingress, min 0 / max 1
+    replicas, DATABASE_URL etc. as `--secrets` + `secretref:`, CORS NOT set on ingress
+  - SQL server `dvandam-ieu2024-sql`, databases `dvandam-ieu2024-dives-db` and
+    `dvandam-ieu2024-sites-db`: GP serverless Gen5 0.5–1 vCore, LRS backups, free offer
+    (`--use-free-limit true --free-limit-exhaustion-behavior AutoPause`, NO
+    `--auto-pause-delay`/`--max-size`), firewall "allow Azure services". One contained user per
+    DB with `db_ddladmin`, `db_datareader`, `db_datawriter`. Azure SQL needs encrypted connections.
+  - Reader on the RG for `amartini@faculty.ie.edu` and `bserra@faculty.ie.edu`.
+  GitHub secrets: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, one DB password per
+  service (+ SECRET_KEY). Variables: `PREFIX`, `RESOURCE_GROUP`, `UI_STORAGE`. Every setup
+  command goes in the README (no passwords). After setup only the pipeline changes anything.
+  CD: `cd.yml` on push to main calls `ci.yml` (`workflow_call`), deploy job has
+  `permissions: id-token: write`, images built with `provenance: false`, GHCR packages made
+  public after the first (failing) deploy; CI uses `branches-ignore: [main]`.
+  Run Azure commands in **bash, not zsh** (zsh mangles `repo:$GH_REPO:ref:...`).
 - **Out of scope:** VMs, App Service plans, AKS, Redis/queues/Service Bus, background job
   runners, any other DB, a third container (gateway/frontend), ACR without justification.
 
