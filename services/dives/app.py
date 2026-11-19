@@ -19,6 +19,7 @@ def create_app(config=None):
         config = load_config()
 
     app.config["VERSION"] = config["VERSION"]
+    app.config["CORS_ORIGIN"] = config["CORS_ORIGIN"]
     app.config["DATABASE_URL"] = config["DATABASE_URL"]
     app.config["SECRET_KEY"] = config["SECRET_KEY"]
     app.config["SITES_URL"] = config["SITES_URL"]
@@ -48,6 +49,15 @@ def create_app(config=None):
               f"{duration_ms:.1f}ms", flush=True)
         return response
 
+    @app.after_request
+    def add_cors_headers(response):
+        """Let the UI, which runs on another address (CORS_ORIGIN), call this service
+        from the browser. Any other website is still blocked by the browser."""
+        response.headers["Access-Control-Allow-Origin"] = app.config["CORS_ORIGIN"]
+        response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        return response
+
     @app.teardown_request
     def close_db_connection(exception):
         conn = getattr(flask.g, "db", None)
@@ -58,6 +68,9 @@ def create_app(config=None):
     app.register_blueprint(users.bp)
     app.register_blueprint(dives.bp)
     app.register_blueprint(feed.bp)
+    app.register_blueprint(users.api_bp)
+    app.register_blueprint(dives.api_bp)
+    app.register_blueprint(feed.api_bp)
 
     # Readable numbers and dates in templates, e.g. {{ dive.duration_s | duration }}.
     app.jinja_env.filters["duration"] = formatting.format_duration

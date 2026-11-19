@@ -1,11 +1,17 @@
 import functools
 
 import flask
+import itsdangerous
 from werkzeug.security import generate_password_hash, check_password_hash
 
 import db
 
 bp = flask.Blueprint("users", __name__)
+# JSON API for the static UI. Logged-in requests carry "Authorization: Bearer <token>".
+api_bp = flask.Blueprint("users_api", __name__, url_prefix="/api")
+
+# How long a login token works before the user has to log in again.
+TOKEN_MAX_AGE_S = 7 * 24 * 60 * 60
 
 
 def create_user(conn, email, name, password):
@@ -205,6 +211,51 @@ def list_outgoing_requests(conn, user_id):
     )
 
 
+# --- Login tokens (for the JSON API) ---
+
+def get_token_serializer():
+    """Signs and checks tokens with SECRET_KEY. The salt keeps these tokens separate
+    from anything else signed with the same key."""
+    return itsdangerous.URLSafeTimedSerializer(flask.current_app.config["SECRET_KEY"],
+                                                salt="login-token")
+
+
+def make_token(user_id):
+    """A signed token holding the user id. Anyone can read it, nobody can change it."""
+    return get_token_serializer().dumps({"user_id": user_id})
+
+
+def read_token(token):
+    """The user id in a token, or None if it was changed, is not a token, or is too old."""
+    try:
+        data = get_token_serializer().loads(token, max_age=TOKEN_MAX_AGE_S)
+    except itsdangerous.BadSignature:
+        # Also catches SignatureExpired (a token older than TOKEN_MAX_AGE_S).
+        return None
+    return data["user_id"]
+
+
+def get_token_user_id():
+    """The user id from the request's "Authorization: Bearer <token>" header, or None."""
+    header = flask.request.headers.get("Authorization", "")
+    if not header.startswith("Bearer "):
+        return None
+    return read_token(header[len("Bearer "):])
+
+
+def token_required(view_func):
+    """For API routes: answer 401 unless the request has a valid token.
+    The user id is put in flask.g.user_id for the route to use."""
+    @functools.wraps(view_func)
+    def wrapped_view(*args, **kwargs):
+        user_id = get_token_user_id()
+        if user_id is None:
+            return flask.jsonify({"error": "Log in first"}), 401
+        flask.g.user_id = user_id
+        return view_func(*args, **kwargs)
+    return wrapped_view
+
+
 def login_required(view_func):
     @functools.wraps(view_func)
     def wrapped_view(*args, **kwargs):
@@ -310,3 +361,95 @@ def friends_remove(other_id):
     except ValueError as e:
         return render_friends_page(error=str(e), status=400)
     return flask.redirect("/friends")
+
+
+# --- JSON API ---
+
+def read_json():
+    """The request's JSON body as a dict ({} if there is none)."""
+    data = flask.request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return {}
+    return data
+
+
+def get_user(conn, user_id):
+    return db.query_one(conn, "SELECT id, email, name FROM users WHERE id = %s", (user_id,))
+
+
+@api_bp.route("/signup", methods=["POST"])
+def api_signup():
+    data = read_json()
+    conn = get_connection()
+    try:
+        user_id = create_user(conn, data.get("email", ""), data.get("name", ""),
+                              data.get("password", ""))
+    except ValueError as e:
+        return flask.jsonify({"error": str(e)}), 400
+    return flask.jsonify({"token": make_token(user_id), "user": get_user(conn, user_id)}), 201
+
+
+@api_bp.route("/login", methods=["POST"])
+def api_login():
+    data = read_json()
+    user = authenticate(get_connection(), data.get("email", ""), data.get("password", ""))
+    if user is None:
+        return flask.jsonify({"error": "Invalid email or password"}), 401
+    return flask.jsonify({"token": make_token(user["id"]), "user": user})
+
+
+@api_bp.route("/me", methods=["GET"])
+@token_required
+def api_me():
+    user = get_user(get_connection(), flask.g.user_id)
+    if user is None:
+        return flask.jsonify({"error": "Log in first"}), 401
+    return flask.jsonify(user)
+
+
+@api_bp.route("/friends", methods=["GET"])
+@token_required
+def api_friends():
+    conn = get_connection()
+    return flask.jsonify({
+        "friends": list_friends(conn, flask.g.user_id),
+        "incoming": list_incoming_requests(conn, flask.g.user_id),
+        "outgoing": list_outgoing_requests(conn, flask.g.user_id),
+    })
+
+
+@api_bp.route("/friends/search", methods=["GET"])
+@token_required
+def api_friends_search():
+    query = flask.request.args.get("q", "")
+    return flask.jsonify(search_users(get_connection(), flask.g.user_id, query))
+
+
+@api_bp.route("/friends/<int:other_id>/request", methods=["POST"])
+@token_required
+def api_friends_request(other_id):
+    try:
+        send_friend_request(get_connection(), flask.g.user_id, other_id)
+    except ValueError as e:
+        return flask.jsonify({"error": str(e)}), 400
+    return flask.jsonify({"status": "sent"}), 201
+
+
+@api_bp.route("/friends/<int:other_id>/accept", methods=["POST"])
+@token_required
+def api_friends_accept(other_id):
+    try:
+        accept_friend_request(get_connection(), flask.g.user_id, other_id)
+    except ValueError as e:
+        return flask.jsonify({"error": str(e)}), 400
+    return flask.jsonify({"status": "friends"})
+
+
+@api_bp.route("/friends/<int:other_id>", methods=["DELETE"])
+@token_required
+def api_friends_remove(other_id):
+    try:
+        remove_friend(get_connection(), flask.g.user_id, other_id)
+    except ValueError as e:
+        return flask.jsonify({"error": str(e)}), 400
+    return flask.jsonify({"status": "removed"})

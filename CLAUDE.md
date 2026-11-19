@@ -169,7 +169,7 @@ Never write a real password into a file — pass it in the shell.
 
 ```bash
 cd services/sites && PORT=8001 DATABASE_URL=... uv run python app.py
-cd services/dives && DATABASE_URL=... SITES_URL=http://localhost:8001 uv run python app.py
+cd services/dives && DATABASE_URL=... SECRET_KEY=... SITES_URL=http://localhost:8001 uv run python app.py
 cd services/dives && TEST_DATABASE_URL=mssql://sa:...@localhost:1433/dives_test \
     uv run pytest --cov=dives --cov=feed --cov=users --cov=migrate --cov=db --cov-report=term-missing
 cd services/sites && TEST_DATABASE_URL=mssql://sa:...@localhost:1433/sites_test \
@@ -186,6 +186,16 @@ cd services/sites && TEST_DATABASE_URL=mssql://sa:...@localhost:1433/sites_test 
 - `GET /health` (`health.py`) uses `db.connect_once` (one try, 5 s) so it answers 503 fast;
   every other request uses `db.get_connection` (retries ~1 min). Request log = `log_request`
   in `app.py`; Flask's own werkzeug request log is silenced.
+- **JSON API (for the static UI)** — dives service: `users.py` `api_bp` (`POST /api/signup`,
+  `POST /api/login` → `{"token", "user"}`, `GET /api/me`, `/api/friends...`), `dives/api.py`
+  (`/api/dives...`), `feed/api.py` (`/api/feed...`). Sites: `GET /api/sites?q=`,
+  `GET /api/sites/<id>`. Logged-in calls send `Authorization: Bearer <token>`;
+  `users.token_required` answers 401 otherwise and sets `flask.g.user_id`. Tokens are signed
+  with `SECRET_KEY` (itsdangerous), valid `TOKEN_MAX_AGE_S` = 7 days, nothing stored server-side.
+  Errors are `{"error": "..."}` with 400/401/404. The Jinja page routes (`routes.py`, cookie
+  login) stay until the static UI replaces them (Fri), then get deleted.
+- CORS: `add_cors_headers` in each `app.py` allows only `CORS_ORIGIN` (default
+  `http://localhost:8080`, the local UI).
 - SQL helpers live in each service's `db.py`: `query_one`, `query_all`, `execute`, `insert`
   (INSERT must contain `OUTPUT INSERTED.id`). Placeholders are `%s`.
 

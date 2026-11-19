@@ -93,3 +93,8 @@ Deadline **Sun 2026-11-22 23:59 (Madrid)**. Work on branch `a2-split`, merge to 
   save with site → `SITES_DOWN_MESSAGE` (400); feed stops calling after the first failure.
   Cross-seam test = option (a): fake sites server (`http.server`) in `tests/test_sites_seam.py`.
   Dives 131 tests, 72% total, `sites_client.py` 97%. Verified in compose with sites stopped.
+- 2026-11-19: JSON API + token login + CORS. Decisions: signed itsdangerous token (no table),
+  7 days, Jinja pages kept until Fri. `itsdangerous` made an explicit dependency (already came
+  with Flask). `SECRET_KEY` now required (no default). `CORS_ORIGIN` env var in both services.
+  Tests: dives 146, sites 30. Verified in compose (token, 401, preflight headers).
+  Coverage note: Jinja `routes.py` files pull the total down to 72%; they go on Fri.

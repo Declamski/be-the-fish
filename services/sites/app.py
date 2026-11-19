@@ -16,6 +16,7 @@ def create_app(config=None):
         config = load_config()
 
     app.config["VERSION"] = config["VERSION"]
+    app.config["CORS_ORIGIN"] = config["CORS_ORIGIN"]
     app.config["DATABASE_URL"] = config["DATABASE_URL"]
 
     # On startup: bring the schema up to date, then add any missing seed sites.
@@ -41,6 +42,15 @@ def create_app(config=None):
         duration_ms = (time.perf_counter() - flask.g.start_time) * 1000
         print(flask.request.method, flask.request.path, response.status_code,
               f"{duration_ms:.1f}ms", flush=True)
+        return response
+
+    @app.after_request
+    def add_cors_headers(response):
+        """Let the UI, which runs on another address (CORS_ORIGIN), call this service
+        from the browser. Any other website is still blocked by the browser."""
+        response.headers["Access-Control-Allow-Origin"] = app.config["CORS_ORIGIN"]
+        response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
         return response
 
     @app.teardown_request
