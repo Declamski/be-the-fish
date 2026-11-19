@@ -34,10 +34,14 @@ def render_detail(dive_id, error=None, status=200):
         detail = service.get_dive_detail(get_connection(), dive_id, current_user_id())
     except ValueError as e:
         return flask.render_template("dives/list.html", dives=[], error=str(e)), 404
+    # If sites already failed for this page, don't wait for a second timeout.
+    site_choices = None
+    if not detail["site_unavailable"]:
+        site_choices = service.get_site_choices(get_connection())
     return flask.render_template(
         "dives/detail.html",
         error=error,
-        site_choices=service.get_site_choices(get_connection()),
+        site_choices=site_choices,
         visibility_levels=service.VALID_VISIBILITY,
         current_levels=service.VALID_CURRENT,
         audiences=service.VALID_AUDIENCES,

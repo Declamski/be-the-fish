@@ -1,6 +1,10 @@
 {# Site dropdown + visibility + current. Shared by dives/new.html and dives/detail.html.
-   Expects site_choices, visibility_levels, current_levels, and optionally
-   selected_site_id, selected_visibility, selected_current. #}
+   Expects site_choices (None when the sites service is unavailable), visibility_levels,
+   current_levels, and optionally selected_site_id, selected_visibility, selected_current. #}
+{% if site_choices is none %}
+<p class="hint">Dive sites are unavailable right now, so a site can't be chosen. You can still save without one.</p>
+<input type="hidden" name="site_id" value="">
+{% else %}
 <label>Search sites <input type="search" data-filter-select="#site-select"
     placeholder="Type to narrow the list below"></label>
 <label>Site
@@ -12,6 +16,7 @@
     </select>
 </label>
 <span class="hint">Missing a site? Contact the admin to have it added.</span>
+{% endif %}
 <label>Visibility
     <select name="visibility">
         <option value="">Not recorded</option>

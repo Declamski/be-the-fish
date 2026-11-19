@@ -47,9 +47,16 @@ Deadline **Sun 2026-11-22 23:59 (Madrid)**. Work on branch `a2-split`, merge to 
 - Token format for auth (signed token via Flask's `itsdangerous` vs random token stored in DB).
 
 ## Still needed from outside
-- IE username → Azure prefix (dots → hyphens).
+- ~~IE username → Azure prefix~~ → `dvandam-ieu2024`.
+- 2026-11-19: `az` logged in as dvandam.ieu2024@student.ie.edu, but NO access to rg-sdd-3a/3b
+  (AuthorizationFailed). Only role: Owner on personal "Azure for Students" (not to be used).
+  → refresh `az login` / ask professor for class RG access + service principal.
 - Class resource group (`rg-sdd-3a` / `rg-sdd-3b`).
-- `system.schema.json` from the professor (copy to repo root).
+- ~~`system.schema.json`~~ → added at repo root 2026-11-19.
+- **CONFLICT (ask professor):** the schema says the UI is an Azure **Storage static website**
+  (`ui.storage_account`, required; name = prefix without hyphens + `ui` → `dvandamieu2024ui`),
+  while the PDF says Azure **Static Web Apps** (`<prefix>-ui`). `static_web_app` fails schema
+  validation (`additionalProperties: false`). Following the schema until told otherwise.
 - Class service principal credentials (GitHub secrets only).
 - GitHub repo is `Declamski/sdd-assignment1.py` (same repo as A1, required).
 
@@ -81,3 +88,8 @@ Deadline **Sun 2026-11-22 23:59 (Madrid)**. Work on branch `a2-split`, merge to 
   silenced, startup line. Tests: dives 120, sites 27. Compose: health 200; sites stopped →
   dives health still 200; SQL Server stopped → 503 in 0.09 s.
 - 2026-11-19: ADR-6 written (moved from Wed). CLAUDE.md rule 4 changed: Claude writes ADRs and AI_USAGE cols 1–5; own-words column stays the student's.
+- 2026-11-19: partial failure handled. `sites_client.SitesUnavailable` (timeout, refused, 5xx, bad
+  JSON; 404 still = no such site). Dive page → "Site unavailable"; forms → no dropdown + note;
+  save with site → `SITES_DOWN_MESSAGE` (400); feed stops calling after the first failure.
+  Cross-seam test = option (a): fake sites server (`http.server`) in `tests/test_sites_seam.py`.
+  Dives 131 tests, 72% total, `sites_client.py` 97%. Verified in compose with sites stopped.

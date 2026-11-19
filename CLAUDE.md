@@ -78,6 +78,10 @@ Detailed context — read the relevant one before working on that area:
 - **SQL Server** with raw SQL through **pymssql**. No ORM. Azure SQL serverless on Azure,
   `mcr.microsoft.com/mssql/server:2022-latest` locally.
 - **Static UI** in `ui/` (HTML/CSS/vanilla JS), calls both services from the browser.
+  Hosting: `system.schema.json` says Azure **Storage static website** (`dvandamieu2024ui`),
+  the PDF says Static Web Apps — conflict open (docs/PLAN2.md). Follow the schema meanwhile.
+- **`system.schema.json`** (repo root, from the professor) is the format `system.yaml` must
+  pass in CI: every env var listed, secrets `secret: true` with no default.
 - Auth: **token in a request header** (not cookies) — UI and services are on different origins.
 
 ## 3. Decided architecture (from the student — follow it)
@@ -143,7 +147,8 @@ Each service folder will hold: its package(s), `app.py`, `config.py`, `db.py`,
   service URLs as config (`config.js` generated at deploy time); then poll `/health` and fail
   if not 200 in time.
 - **Azure:** shared class resource group (`rg-sdd-3a`/`3b` — not known yet). Every resource
-  prefixed with the student's IE username (dots → hyphens; prefix not known yet — ask).
+  prefixed with **`dvandam-ieu2024`** (IE username `dvandam.ieu2024`, dot → hyphen).
+  Personal "Azure for Students" subscription must NOT be used — class RG only.
   Allowance: 2 Container Apps (Consumption, min 0 / max 1 replica), 1 SQL server
   `<prefix>-sql` with 2 serverless DBs `<prefix>-<service>-db` (Gen5, 0.5–1 vCore,
   shortest auto-pause, 2 GB, LRS backups), 1 Static Web App `<prefix>-ui`. Never create

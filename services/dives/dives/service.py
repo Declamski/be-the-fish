@@ -6,6 +6,9 @@ VALID_DISCIPLINES = {"scuba", "freedive", "spearfishing"}
 SESSION_DISCIPLINES = {"freedive", "spearfishing"}
 VALID_VISIBILITY = ["poor", "moderate", "good", "excellent"]
 VALID_CURRENT = ["none", "light", "moderate", "strong"]
+# Shown when a site is chosen but the sites service cannot be reached.
+SITES_DOWN_MESSAGE = ("Dive sites are unavailable right now. Try again later, "
+                      "or save the dive without a site.")
 # Who can see a dive. New and imported dives start as private.
 VALID_AUDIENCES = ["private", "friends", "public"]
 
@@ -29,8 +32,13 @@ def can_view_dive(conn, dive, viewer_id):
 def check_site_and_conditions(conn, site_id, visibility, current):
     """All three are optional. Raise ValueError if any given value is not allowed."""
     # Sites belong to another service, so we ask its API instead of querying its table.
-    if site_id is not None and not sites_client.site_exists(site_id):
-        raise ValueError("That dive site does not exist")
+    if site_id is not None:
+        try:
+            exists = sites_client.site_exists(site_id)
+        except sites_client.SitesUnavailable:
+            raise ValueError(SITES_DOWN_MESSAGE)
+        if not exists:
+            raise ValueError("That dive site does not exist")
     if visibility is not None and visibility not in VALID_VISIBILITY:
         raise ValueError("Visibility must be one of: " + ", ".join(VALID_VISIBILITY))
     if current is not None and current not in VALID_CURRENT:
@@ -170,10 +178,17 @@ def list_dives(conn, user_id):
 
 
 def get_site_choices(conn):
-    """Every dive site as {"id", "label"}, for the site dropdown on the dive forms."""
+    """Every dive site as {"id", "label"}, for the site dropdown on the dive forms.
+
+    Returns None if the sites service is unavailable, so the form can say so.
+    """
+    try:
+        # One HTTP call for the whole list; each site already comes with its label.
+        sites = sites_client.search_sites("")
+    except sites_client.SitesUnavailable:
+        return None
     choices = []
-    # One HTTP call for the whole list; each site already comes with its label.
-    for site in sites_client.search_sites(""):
+    for site in sites:
         choices.append({"id": site["id"], "label": site["label"]})
     return choices
 
@@ -186,14 +201,20 @@ def get_dive_detail(conn, dive_id, viewer_id):
         raise ValueError("Dive not found")
 
     site_label = None
+    site_unavailable = False
     if dive["site_id"] is not None:
-        site_label = sites_client.get_site_label(dive["site_id"])
+        try:
+            site_label = sites_client.get_site_label(dive["site_id"])
+        except sites_client.SitesUnavailable:
+            # The rest of the dive page still works without the site's name.
+            site_unavailable = True
 
     return {
         "dive": dive,
         "is_owner": dive["user_id"] == viewer_id,
         "owner_name": users.get_user_name(conn, dive["user_id"]),
         "site_label": site_label,
+        "site_unavailable": site_unavailable,
         "descents": repository.list_descents(conn, dive_id),
         "catches": repository.list_catches(conn, dive_id),
     }
@@ -224,10 +245,16 @@ def list_feed_dives(conn, viewer_id, offset, limit):
     page = visible[offset:offset + limit]
 
     dives = []
+    # After the first failed call we stop asking, so a page of 20 dives does not
+    # wait for 20 timeouts. Those dives are shown without their site.
+    sites_down = False
     for dive in page:
         site_label = None
-        if dive["site_id"] is not None:
-            site_label = sites_client.get_site_label(dive["site_id"])
+        if dive["site_id"] is not None and not sites_down:
+            try:
+                site_label = sites_client.get_site_label(dive["site_id"])
+            except sites_client.SitesUnavailable:
+                sites_down = True
         dives.append({
             "id": dive["id"],
             "user_id": dive["user_id"],
