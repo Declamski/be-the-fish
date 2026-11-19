@@ -51,13 +51,12 @@
 ---
 
 ## 6. The split
-<!-- Brief: where the seam is, what crosses it, whether ADR-2 held, and why it moved if it did. -->
-* **Date:** 
+* **Date:** 2026-11-19
 * **Status:** Decided
-* **Context:** 
-* **Decision:** 
-* **Alternatives considered:** 
-* **Consequences:** 
+* **Context:** Assignment 2 requires the monolith to be split into separate services along the seam from ADR-2, each in its own container with its own database, with a maximum of two service containers. In Assignment 1 I had three domains (dives, sites and feed), so not every domain could become its own service.
+* **Decision:** I split the app into two services: `services/dives`, which holds dives, feed and users/login, and `services/sites`, which holds the dive site catalogue. The seam between dives and sites from ADR-2 held, and the only thing that crosses it is dives calling sites over HTTP (`site_exists`, `search_sites` and `get_site_label` in `dives/sites_client.py`), found through `SITES_URL` and with a timeout on every call. Feed did not get its own service because of the two container maximum, so it was put inside dives, but it is still its own package and never touches the dives repository.
+* **Alternatives considered:** Putting feed and users in the second service and moving sites into dives: feed needs dives for almost everything it does (every feed page, kudos and comment checks the dive), so this would have meant many calls across the seam, while dives only needs sites when a site is picked or shown. Making users/login its own service: it would need a third container, which isn't allowed, and every request would have to call it. Having the UI call both services and join the data in the browser: at least one flow has to cross on the server, and checking that a site exists has to happen on the server anyway, otherwise someone could save a dive with a made up site.
+* **Consequences:** Dive pages now depend on a network call to sites, so if sites is slow or down it affects dives, which is why every call has a timeout. `site_id` is now just a number with no foreign key, so it is only checked when a dive is saved, and some files (`db.py`, `migrate.py`, `config.py`) are copied into both services. In return each service can be deployed and fail on its own, and because feed kept its own package it could be split out into a third service later without restructuring it.
 
 ---
 

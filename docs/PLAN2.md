@@ -80,3 +80,4 @@ Deadline **Sun 2026-11-22 23:59 (Madrid)**. Work on branch `a2-split`, merge to 
   200/503 JSON with `VERSION`), one stdout line per request (`log_request`), werkzeug log
   silenced, startup line. Tests: dives 120, sites 27. Compose: health 200; sites stopped →
   dives health still 200; SQL Server stopped → 503 in 0.09 s.
+- 2026-11-19: ADR-6 written (moved from Wed). CLAUDE.md rule 4 changed: Claude writes ADRs and AI_USAGE cols 1–5; own-words column stays the student's.

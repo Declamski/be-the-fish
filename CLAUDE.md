@@ -22,15 +22,33 @@ Detailed context — read the relevant one before working on that area:
    student's OK, then write code. Only small mechanical choices may be defaulted.
 3. **Small steps.** One feature or layer per task. After each task, explain in plain English
    what each new function/file does, naming them. For infra files, explain line by line.
-4. **Never write these for the student:**
-   - The "In my own words, how this works" column of `AI_USAGE.md`.
-   - ADR entries 6–10 in `ADR.md`, or changes to entries 1–5 (e.g. `Status: Superseded by [N]`).
-     You may list options and trade-offs; the student decides and writes.
-   After each meaningful task, you MAY append a row to `AI_USAGE.md` (Date, Tool `Claude Code`,
-   Prompt summary, Disposition, What changed), leaving the last column as `TODO: write yourself`.
-   Infra files written by AI (Dockerfile, compose, workflows, IaC) must be logged too.
-   Alongside each row, append an entry to `notes_from_AI.md`: what it does in plain English,
-   why this approach, alternatives considered.
+4. **ADR.md and AI_USAGE.md — Claude writes them, in the student's style:**
+   - **ADRs (6–10):** Claude writes the full entry from the decisions the student made (ask if
+     a decision is not made yet — never invent one). Old ADRs 1–5 are only changed to add
+     `Status: Superseded by [N]` when the student agrees. Each new ADR goes in its own commit,
+     and ADRs 6–10 must land on ≥3 different commit dates (brief §6).
+   - **AI_USAGE.md:** after each meaningful task Claude appends a row and fills columns 1–5
+     completely (Date, Tool `Claude Code`, Prompt, Disposition, What changed & why). Rows go in
+     the "Assignment 2" table. Infra files (Dockerfile, compose, workflows, IaC) are logged too.
+   - **The "In my own words, how this works" column is NEVER written by Claude** — the heading
+     says the words are the student's. Leave `TODO: write yourself`. Claude may help by
+     (a) tidying grammar/function names of what the student says, keeping their meaning, or
+     (b) quizzing the student, whose answers become the column.
+   - **Style = copy the existing entries (ADR 1–5, the A1 AI_USAGE rows). There is no other
+     style guide.** That means:
+     - ADR layout: `## N. Title`, then `* **Date:**`, `* **Status:** Decided`, `* **Context:**`,
+       `* **Decision:**`, `* **Alternatives considered:**`, `* **Consequences:**`, `---` between.
+     - First person ("I decided", "I chose"), plain and direct, like a student explaining to the
+       professor — no marketing words, no bullet lists inside fields, 1–4 sentences per field.
+     - Alternatives: name each one, then a colon and why it was rejected
+       ("Running the tests on the actual database: It just adds too much complication…").
+     - Consequences: honest about the downside first, then what it enables.
+     - AI_USAGE "What changed & why": first person, says what the student decided vs. what
+       Claude proposed ("My decision: …", "(my call)", "Claude first … ; I rejected that"),
+       real function/file names in backticks, 2–3 sentences.
+     - Date = the day the entry is committed (YYYY-MM-DD).
+   Alongside each AI_USAGE row, append an entry to `notes_from_AI.md`: what it does in plain
+   English, why this approach, alternatives considered.
 5. **Git:**
    - **Never run `git add`, `git commit`, `git push`, `git tag` or open PRs.** The student does
      all of these themselves. You may propose a descriptive commit message (what and why).
