@@ -111,3 +111,7 @@ Deadline **Sun 2026-11-29 23:59 (Madrid)** (moved from 22 Nov). Work on branch `
   login and page routes in `users.py`. `GET /` = `{"service", "version"}` JSON (no DB). Dockerfile
   COPY lines updated; both images build. Tests: dives 135 (86%), sites 31 (89%).
   Azure setup moved to the other thread ("A2 Azure Deployment Setup Guide"); this thread does not run az.
+- 2026-11-26: `openapi.yaml` per service (OpenAPI 3.0.3, every route, checked against `app.url_map`)
+  and `system.yaml` (passes `check-jsonschema` against `system.schema.json`). Seam call listed:
+  `GET /api/sites/{site_id}` only. Dead code found: `get_site_choices` + `sites_client.search_sites`.
+

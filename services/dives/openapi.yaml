@@ -1,0 +1,907 @@
+openapi: 3.0.3
+info:
+  title: Be the Fish - dives service
+  version: "1.0"
+  description: >
+    Dives, the feed (kudos and comments) and users (login and friends). Called by the
+    static UI from the browser. Every /api route except signup and login needs the
+    header "Authorization: Bearer <token>", where the token comes from signup or login.
+    To show site names and check site ids, this service calls the sites service
+    (GET /api/sites/{site_id}). If sites is down, reading still works (site_label is null,
+    site_unavailable is true), and saving a dive with a site answers 400.
+servers:
+  - url: http://localhost:8000
+    description: Local (docker compose)
+
+security:
+  - bearerToken: []
+
+paths:
+  /:
+    get:
+      summary: Which service and which build this is
+      security: []
+      responses:
+        "200":
+          description: Service name and version
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceInfo"
+
+  /health:
+    get:
+      summary: Can this service read and write its own database right now
+      description: Checks only this service's own database, never the sites service.
+      security: []
+      responses:
+        "200":
+          description: The database works
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        "503":
+          description: The database cannot be reached or written to
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+
+  # --- Users and login ---
+
+  /api/signup:
+    post:
+      summary: Create an account and log in
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, name, password]
+              properties:
+                email:
+                  type: string
+                name:
+                  type: string
+                password:
+                  type: string
+                  minLength: 8
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/login:
+    post:
+      summary: Log in and get a token (valid 7 days)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResult"
+        "401":
+          description: Wrong email or password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/me:
+    get:
+      summary: The logged-in user
+      responses:
+        "200":
+          description: The user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/NotLoggedIn"
+
+  /api/friends:
+    get:
+      summary: My friends and my pending friend requests
+      responses:
+        "200":
+          description: Friends, requests sent to me, and requests I sent
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [friends, incoming, outgoing]
+                properties:
+                  friends:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Person"
+                  incoming:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Person"
+                  outgoing:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Person"
+        "401":
+          $ref: "#/components/responses/NotLoggedIn"
+
+  /api/friends/search:
+    get:
+      summary: Other users whose name contains q, with my friend status for each
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Matching users (empty list for an empty q)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, name, status]
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    status:
+                      type: string
+                      enum: [none, sent, received, friends]
+        "401":
+          $ref: "#/components/responses/NotLoggedIn"
+
+  /api/friends/{other_id}/request:
+    post:
+      summary: Send a friend request
+      parameters:
+        - $ref: "#/components/parameters/OtherId"
+      responses:
+        "201":
+          description: Request sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendStatus"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/NotLoggedIn"
+
+  /api/friends/{other_id}/accept:
+    post:
+      summary: Accept the friend request other_id sent me
+      parameters:
+        - $ref: "#/components/parameters/OtherId"
+      responses:
+        "200":
+          description: Now friends
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendStatus"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/NotLoggedIn"
+
+  /api/friends/{other_id}:
+    delete:
+      summary: Decline, cancel a request, or unfriend
+      parameters:
+        - $ref: "#/components/parameters/OtherId"
+      responses:
+        "200":
+          description: Removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendStatus"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/NotLoggedIn"
+
+  # --- Dives ---
+
+  /api/dives/options:
+    get:
+      summary: Allowed values for the dive form's dropdowns
+      responses:
+        "200":
+          description: The allowed values
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [disciplines, visibility_levels, current_levels, audiences]
+                properties:
+                  disciplines:
+                    type: array
+                    items:
+                      type: string
+                  visibility_levels:
+                    type: array
+                    items:
+                      type: string
+                  current_levels:
+                    type: array
+                    items:
+                      type: string
+                  audiences:
+                    type: array
+                    items:
+                      type: string
+        "401":
+          $ref: "#/components/responses/NotLoggedIn"
+
+  /api/dives:
+    get:
+      summary: My dives, newest first
+      responses:
+        "200":
+          description: My dives
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Dive"
+        "401":
+          $ref: "#/components/responses/NotLoggedIn"
+    post:
+      summary: Log a dive
+      description: >
+        Scuba: one dive with max_depth_m and duration_s. Freedive or spearfishing: a
+        session with a list of descents; its max depth and duration are worked out from
+        them. If site_id is given, it is checked with the sites service; if sites does not
+        answer, the answer is 400 with a "site unavailable" message.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewDive"
+      responses:
+        "201":
+          description: Dive saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Id"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/NotLoggedIn"
+
+  /api/dives/import:
+    post:
+      summary: Import dives from a Subsurface CSV export
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                discipline_override:
+                  type: string
+                  enum: [scuba, freedive, spearfishing]
+      responses:
+        "200":
+          description: How many rows were imported and skipped
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [imported, skipped_invalid, skipped_duplicate]
+                properties:
+                  imported:
+                    type: integer
+                  skipped_invalid:
+                    type: integer
+                  skipped_duplicate:
+                    type: integer
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/NotLoggedIn"
+
+  /api/dives/{dive_id}:
+    get:
+      summary: One dive with its descents, catches and site name
+      description: >
+        site_label comes from the sites service. If sites does not answer, site_label is
+        null and site_unavailable is true; the rest of the dive is still returned.
+      parameters:
+        - $ref: "#/components/parameters/DiveId"
+      responses:
+        "200":
+          description: The dive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiveDetail"
+        "401":
+          $ref: "#/components/responses/NotLoggedIn"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/dives/{dive_id}/site:
+    put:
+      summary: Change a dive's site and conditions (owner only)
+      parameters:
+        - $ref: "#/components/parameters/DiveId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                site_id:
+                  type: integer
+                  nullable: true
+                visibility:
+                  type: string
+                  nullable: true
+                current:
+                  type: string
+                  nullable: true
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Id"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/NotLoggedIn"
+
+  /api/dives/{dive_id}/audience:
+    put:
+      summary: Change who can see a dive (owner only)
+      parameters:
+        - $ref: "#/components/parameters/DiveId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [audience]
+              properties:
+                audience:
+                  type: string
+                  enum: [private, friends, public]
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Id"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/NotLoggedIn"
+
+  /api/dives/{dive_id}/catches:
+    post:
+      summary: Add a catch to a spearfishing session (owner only)
+      parameters:
+        - $ref: "#/components/parameters/DiveId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [species]
+              properties:
+                species:
+                  type: string
+                weight_kg:
+                  type: number
+                  nullable: true
+      responses:
+        "201":
+          description: Catch saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Id"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/NotLoggedIn"
+
+  # --- Feed, kudos, comments ---
+
+  /api/feed:
+    get:
+      summary: One page (20) of the dives I can see, newest first
+      parameters:
+        - name: offset
+          in: query
+          required: false
+          description: Where to start; the previous page's next_offset. Default 0.
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: One page of the feed
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, has_more, next_offset]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/FeedItem"
+                  has_more:
+                    type: boolean
+                  next_offset:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/NotLoggedIn"
+
+  /api/feed/dives/{dive_id}/social:
+    get:
+      summary: Kudos and comments on a dive
+      parameters:
+        - $ref: "#/components/parameters/DiveId"
+      responses:
+        "200":
+          description: Kudos count and comments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Social"
+        "401":
+          $ref: "#/components/responses/NotLoggedIn"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/feed/dives/{dive_id}/kudos:
+    post:
+      summary: Give kudos (one per person, not on your own dive)
+      parameters:
+        - $ref: "#/components/parameters/DiveId"
+      responses:
+        "201":
+          description: Kudos given
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiveIdOnly"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/NotLoggedIn"
+    delete:
+      summary: Take kudos back
+      parameters:
+        - $ref: "#/components/parameters/DiveId"
+      responses:
+        "200":
+          description: Kudos removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiveIdOnly"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/NotLoggedIn"
+
+  /api/feed/dives/{dive_id}/comments:
+    post:
+      summary: Comment on a dive (1-500 characters)
+      parameters:
+        - $ref: "#/components/parameters/DiveId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body:
+                  type: string
+                  minLength: 1
+                  maxLength: 500
+      responses:
+        "201":
+          description: Comment saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Id"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/NotLoggedIn"
+
+  /api/feed/comments/{comment_id}:
+    delete:
+      summary: Delete my own comment
+      parameters:
+        - name: comment_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Comment deleted; answers with the dive it was on
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiveIdOnly"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/NotLoggedIn"
+
+components:
+  securitySchemes:
+    bearerToken:
+      type: http
+      scheme: bearer
+      description: Signed token from /api/signup or /api/login, valid for 7 days
+
+  parameters:
+    DiveId:
+      name: dive_id
+      in: path
+      required: true
+      schema:
+        type: integer
+    OtherId:
+      name: other_id
+      in: path
+      required: true
+      description: The other user's id
+      schema:
+        type: integer
+
+  responses:
+    BadRequest:
+      description: The input was not valid; error says why
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotLoggedIn:
+      description: No valid token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Does not exist, or I am not allowed to see it
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    ServiceInfo:
+      type: object
+      required: [service, version]
+      properties:
+        service:
+          type: string
+          example: dives
+        version:
+          type: string
+          description: Git commit SHA of the running image ("dev" locally)
+
+    Health:
+      type: object
+      required: [status, db, version]
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+        db:
+          type: string
+          enum: [ok, error]
+        version:
+          type: string
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    Id:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: integer
+
+    DiveIdOnly:
+      type: object
+      required: [dive_id]
+      properties:
+        dive_id:
+          type: integer
+
+    User:
+      type: object
+      required: [id, email, name]
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+
+    LoginResult:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+
+    Person:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+
+    FriendStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [sent, friends, removed]
+
+    NewDive:
+      type: object
+      required: [discipline, started_at]
+      properties:
+        discipline:
+          type: string
+          enum: [scuba, freedive, spearfishing]
+        started_at:
+          type: string
+          description: Local time, ISO 8601 without a time zone
+          example: "2026-01-01T10:00:00"
+        max_depth_m:
+          type: number
+          description: Scuba only
+        duration_s:
+          type: integer
+          description: Scuba only
+        descents:
+          type: array
+          description: Freedive and spearfishing only
+          items:
+            type: object
+            required: [depth_m, duration_s]
+            properties:
+              depth_m:
+                type: number
+              duration_s:
+                type: integer
+        site_id:
+          type: integer
+          nullable: true
+          description: Id from the sites service
+        water_temp_c:
+          type: number
+          nullable: true
+        visibility:
+          type: string
+          nullable: true
+          enum: [poor, moderate, good, excellent, null]
+        current:
+          type: string
+          nullable: true
+          enum: [none, light, moderate, strong, null]
+        audience:
+          type: string
+          enum: [private, friends, public]
+          default: private
+        notes:
+          type: string
+          nullable: true
+
+    Dive:
+      type: object
+      required: [id, user_id, discipline, started_at, max_depth_m, duration_s, audience]
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        site_id:
+          type: integer
+          nullable: true
+        source_device:
+          type: string
+          nullable: true
+        external_id:
+          type: string
+          nullable: true
+        started_at:
+          type: string
+        discipline:
+          type: string
+        max_depth_m:
+          type: number
+        duration_s:
+          type: integer
+        water_temp_c:
+          type: number
+          nullable: true
+        visibility:
+          type: string
+          nullable: true
+        current_level:
+          type: string
+          nullable: true
+        audience:
+          type: string
+        notes:
+          type: string
+          nullable: true
+
+    DiveDetail:
+      type: object
+      required: [dive, descents, catches, owner_name, is_owner, site_label, site_unavailable]
+      properties:
+        dive:
+          $ref: "#/components/schemas/Dive"
+        descents:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              dive_id:
+                type: integer
+              depth_m:
+                type: number
+              duration_s:
+                type: integer
+              started_at:
+                type: string
+                nullable: true
+        catches:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              dive_id:
+                type: integer
+              species:
+                type: string
+              weight_kg:
+                type: number
+                nullable: true
+        owner_name:
+          type: string
+        is_owner:
+          type: boolean
+        site_label:
+          type: string
+          nullable: true
+          description: From the sites service; null if no site or sites did not answer
+        site_unavailable:
+          type: boolean
+          description: True if the dive has a site but the sites service did not answer
+
+    FeedItem:
+      type: object
+      required: [id, user_id, owner_name, discipline, started_at, max_depth_m, duration_s,
+                 kudos_count, comment_count, site_label]
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        owner_name:
+          type: string
+        discipline:
+          type: string
+        started_at:
+          type: string
+        max_depth_m:
+          type: number
+        duration_s:
+          type: integer
+        kudos_count:
+          type: integer
+        comment_count:
+          type: integer
+        site_label:
+          type: string
+          nullable: true
+          description: Null if no site, or if the sites service did not answer
+
+    Social:
+      type: object
+      required: [dive_id, kudos_count, viewer_gave_kudos, can_give_kudos, comments,
+                 max_comment_length]
+      properties:
+        dive_id:
+          type: integer
+        kudos_count:
+          type: integer
+        viewer_gave_kudos:
+          type: boolean
+        can_give_kudos:
+          type: boolean
+        max_comment_length:
+          type: integer
+        comments:
+          type: array
+          items:
+            type: object
+            required: [id, author_name, body, created_at, is_author]
+            properties:
+              id:
+                type: integer
+              author_name:
+                type: string
+              body:
+                type: string
+              created_at:
+                type: string
+              is_author:
+                type: boolean

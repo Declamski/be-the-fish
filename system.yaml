@@ -1,0 +1,87 @@
+# yaml-language-server: $schema=./system.schema.json
+# The whole system in one place: both services, their config, the call across the seam,
+# and the Azure resources. CI checks this file against system.schema.json.
+
+student: dvandam.ieu2024
+prefix: dvandam-ieu2024
+public_url: https://dvandamieu2024ui.z38.web.core.windows.net
+
+ui:
+  path: ui/
+  storage_account: dvandamieu2024ui
+  calls: [dives, sites]
+
+azure:
+  resource_group: rg-dvandam-ieu2024
+  container_apps_environment: dvandam-ieu2024-env
+  sql_server: dvandam-ieu2024-sql
+  registry: ghcr.io/declamski
+
+services:
+  dives:
+    description: Dives, the feed (kudos and comments) and users (login and friends).
+    path: services/dives/
+    openapi: services/dives/openapi.yaml
+    port_default: 8000
+    health: /health
+    migrations: services/dives/migrations/
+    env:
+      PORT:
+        description: Port the service listens on.
+        default: 8000
+      DATABASE_URL:
+        description: The dives database, as mssql://dives_user:<password>@<host>:1433/<database>.
+        secret: true
+      SECRET_KEY:
+        description: Signs the login tokens. Any long random string.
+        secret: true
+      SITES_URL:
+        description: Base URL of the sites service.
+        default: http://localhost:8001
+      SITES_TIMEOUT_S:
+        description: Seconds to wait for the sites service before giving up.
+        default: 2
+      CORS_ORIGIN:
+        description: The UI's address (no trailing slash), the only website allowed to call this service.
+        default: http://localhost:8080
+      VERSION:
+        description: Git commit SHA of the image, shown by / and /health.
+        default: dev
+    calls:
+      - service: sites
+        url_env: SITES_URL
+        endpoints:
+          - GET /api/sites/{site_id}
+        timeout_s: 2
+        on_failure: >
+          Dive pages and the feed still load, without the site name (the dive page says
+          "Site unavailable"). Saving or changing a dive with a site answers 400 with
+          "Dive sites are unavailable right now. Try again later, or save the dive without
+          a site." Nothing hangs: every call gives up after SITES_TIMEOUT_S.
+    azure:
+      container_app: dvandam-ieu2024-dives
+      sql_database: dvandam-ieu2024-dives-db
+
+  sites:
+    description: The read-only catalogue of dive sites, seeded at startup. No login.
+    path: services/sites/
+    openapi: services/sites/openapi.yaml
+    port_default: 8000
+    health: /health
+    migrations: services/sites/migrations/
+    env:
+      PORT:
+        description: Port the service listens on.
+        default: 8000
+      DATABASE_URL:
+        description: The sites database, as mssql://sites_user:<password>@<host>:1433/<database>.
+        secret: true
+      CORS_ORIGIN:
+        description: The UI's address (no trailing slash), the only website allowed to call this service.
+        default: http://localhost:8080
+      VERSION:
+        description: Git commit SHA of the image, shown by / and /health.
+        default: dev
+    azure:
+      container_app: dvandam-ieu2024-sites
+      sql_database: dvandam-ieu2024-sites-db

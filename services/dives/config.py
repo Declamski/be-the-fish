@@ -11,7 +11,7 @@ def load_config():
     database_url = os.environ.get("DATABASE_URL")
     if not database_url:
         raise SystemExit("DATABASE_URL is not set (mssql://user:password@host:port/database)")
-    # Secret, so no default: signs login tokens and the page login cookie.
+    # Secret, so no default: signs the login tokens.
     secret_key = os.environ.get("SECRET_KEY")
     if not secret_key:
         raise SystemExit("SECRET_KEY is not set (any long random string)")

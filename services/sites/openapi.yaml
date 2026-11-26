@@ -1,0 +1,137 @@
+openapi: 3.0.3
+info:
+  title: Be the Fish - sites service
+  version: "1.0"
+  description: >
+    The read-only catalogue of dive sites. No login needed. The dives service calls
+    GET /api/sites and GET /api/sites/{site_id} over HTTP (the seam), and the UI calls
+    them from the browser for the site dropdown and the sites pages.
+servers:
+  - url: http://localhost:8001
+    description: Local (docker compose)
+
+paths:
+  /:
+    get:
+      summary: Which service and which build this is
+      responses:
+        "200":
+          description: Service name and version
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceInfo"
+
+  /health:
+    get:
+      summary: Can this service read and write its own database right now
+      responses:
+        "200":
+          description: The database works
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        "503":
+          description: The database cannot be reached or written to
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+
+  /api/sites:
+    get:
+      summary: Search sites by name or location
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Text to look for in the name or location (ignoring case). Empty = all sites.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The matching sites, sorted by name, then location
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Site"
+
+  /api/sites/{site_id}:
+    get:
+      summary: One site
+      parameters:
+        - name: site_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: The site
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Site"
+        "404":
+          description: No site with this id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    ServiceInfo:
+      type: object
+      required: [service, version]
+      properties:
+        service:
+          type: string
+          example: sites
+        version:
+          type: string
+          description: Git commit SHA of the running image ("dev" locally)
+
+    Health:
+      type: object
+      required: [status, db, version]
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+        db:
+          type: string
+          enum: [ok, error]
+        version:
+          type: string
+
+    Site:
+      type: object
+      required: [id, name, location, description, label]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          example: Blue Hole
+        location:
+          type: string
+          example: Gozo, Malta
+        description:
+          type: string
+          nullable: true
+        label:
+          type: string
+          description: name + " - " + location, shown wherever a dive names its site
+          example: Blue Hole - Gozo, Malta
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          example: Site not found
