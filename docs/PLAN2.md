@@ -114,4 +114,9 @@ Deadline **Sun 2026-11-29 23:59 (Madrid)** (moved from 22 Nov). Work on branch `
 - 2026-11-26: `openapi.yaml` per service (OpenAPI 3.0.3, every route, checked against `app.url_map`)
   and `system.yaml` (passes `check-jsonschema` against `system.schema.json`). Seam call listed:
   `GET /api/sites/{site_id}` only. Dead code found: `get_site_choices` + `sites_client.search_sites`.
+- 2026-11-26: CI `.github/workflows/ci.yml` (push except main, PRs, `workflow_call` from CD): per service
+  `uv sync --frozen`, `uvx ruff@0.17.5`, throwaway SQL Server with a random per-run password,
+  pytest `--cov-fail-under=70`; `validate` (check-jsonschema 0.39.0, openapi-spec-validator 0.9.0);
+  `build` both images. Ruff findings fixed (no behaviour change). Local run: dives 88%, sites 95%.
+  ADR-8 drafted (uncommitted) — waiting for the Azure thread to settle the SQL region before committing.
 

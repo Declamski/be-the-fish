@@ -8,6 +8,7 @@ import io
 import flask
 
 import users
+
 from . import importer, service
 
 api_bp = flask.Blueprint("dives_api", __name__, url_prefix="/api/dives")

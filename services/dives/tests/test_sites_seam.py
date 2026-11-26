@@ -107,9 +107,9 @@ def test_unknown_site_is_none_not_an_error(fake_sites_server):
 
 def test_sites_error_answer_is_unavailable(fake_sites_server):
     fake_sites_server.mode = "error"
-    with point_dives_at(server_url(fake_sites_server)):
-        with pytest.raises(sites_client.SitesUnavailable):
-            sites_client.get_site(1)
+    with point_dives_at(server_url(fake_sites_server)), \
+            pytest.raises(sites_client.SitesUnavailable):
+        sites_client.get_site(1)
 
 
 def test_slow_sites_times_out(fake_sites_server):
@@ -123,9 +123,9 @@ def test_slow_sites_times_out(fake_sites_server):
 
 
 def test_sites_down_is_unavailable():
-    with point_dives_at(NOTHING_LISTENING_URL):
-        with pytest.raises(sites_client.SitesUnavailable):
-            sites_client.search_sites("")
+    with point_dives_at(NOTHING_LISTENING_URL), \
+            pytest.raises(sites_client.SitesUnavailable):
+        sites_client.search_sites("")
 
 
 # --- what the dives service does when sites is down (needs the test database) ---

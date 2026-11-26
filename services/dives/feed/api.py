@@ -5,6 +5,7 @@ import datetime
 import flask
 
 import users
+
 from . import service
 
 api_bp = flask.Blueprint("feed_api", __name__, url_prefix="/api/feed")

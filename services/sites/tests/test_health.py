@@ -1,5 +1,6 @@
-import health
 from conftest import TEST_DATABASE_URL
+
+import health
 
 
 def test_check_database_ok(conn):

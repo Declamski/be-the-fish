@@ -129,9 +129,8 @@ def test_import_csv_file_override_applies_to_every_row(conn):
 
 
 def test_import_csv_stream_rejects_unknown_override(conn):
-    with open(FIXTURE, newline="") as f:
-        with pytest.raises(ValueError):
-            importer.import_csv_stream(conn, 1, f, discipline_override="snorkelling")
+    with open(FIXTURE, newline="") as f, pytest.raises(ValueError):
+        importer.import_csv_stream(conn, 1, f, discipline_override="snorkelling")
 
 
 def test_import_csv_stream_rejects_file_with_wrong_columns(conn):

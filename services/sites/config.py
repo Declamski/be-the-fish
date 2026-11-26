@@ -2,7 +2,7 @@ import os
 
 
 def load_config():
-    port = int(os.environ.get("PORT", 8000))
+    port = int(os.environ.get("PORT", "8000"))
     # The git commit the image was built from, shown by GET /health.
     version = os.environ.get("VERSION", "dev")
     # The address of the UI, the only website allowed to call this service (CORS).

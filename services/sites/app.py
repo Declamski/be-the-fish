@@ -2,11 +2,12 @@ import logging
 import time
 
 import flask
-from config import load_config
+
 import db
-import migrate
 import health
+import migrate
 import sites
+from config import load_config
 
 
 def create_app(config=None):

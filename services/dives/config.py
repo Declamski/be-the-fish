@@ -2,7 +2,7 @@ import os
 
 
 def load_config():
-    port = int(os.environ.get("PORT", 8000))
+    port = int(os.environ.get("PORT", "8000"))
     # The git commit the image was built from, shown by GET /health.
     version = os.environ.get("VERSION", "dev")
     # The address of the UI, the only website allowed to call this service (CORS).
@@ -17,7 +17,7 @@ def load_config():
         raise SystemExit("SECRET_KEY is not set (any long random string)")
     # Where the sites service is, and how long to wait for it before giving up.
     sites_url = os.environ.get("SITES_URL", "http://localhost:8001")
-    sites_timeout_s = float(os.environ.get("SITES_TIMEOUT_S", 2))
+    sites_timeout_s = float(os.environ.get("SITES_TIMEOUT_S", "2"))
     return {
         "PORT": port,
         "VERSION": version,

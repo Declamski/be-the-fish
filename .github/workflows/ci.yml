@@ -1,0 +1,98 @@
+# CI: runs on every push to a branch other than main, on every pull request, and is
+# called by cd.yml for pushes to main (so CD only deploys a commit that passed CI).
+name: CI
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+  workflow_call:
+
+# The workflow only needs to read the code.
+permissions:
+  contents: read
+
+jobs:
+  # Lint and test each service on its own, against a throwaway SQL Server.
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      # Finish both services even if one fails, so one run shows every problem.
+      fail-fast: false
+      matrix:
+        include:
+          - service: dives
+            cov: --cov=dives --cov=feed --cov=users --cov=migrate --cov=db
+          - service: sites
+            cov: --cov=sites --cov=migrate --cov=db
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # uv at the same version as in the Dockerfiles. It installs Python 3.13 itself.
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.15"
+
+      # Exactly the versions in uv.lock, test tools included.
+      - name: Install
+        run: uv sync --frozen
+
+      # ruff at a pinned version, run with uvx so it is not a dependency of the service.
+      - name: Lint
+        run: uvx ruff@0.17.5 check .
+
+      # A SQL Server only for this run. Its password is made up here, hidden in the logs
+      # (add-mask), and thrown away with the runner: nothing is stored in the repo.
+      # The CI prefix adds the capital letter SQL Server's password rules need.
+      - name: Start SQL Server
+        run: |
+          SA_PASSWORD="CI$(openssl rand -hex 16)"
+          echo "::add-mask::$SA_PASSWORD"
+          echo "TEST_DATABASE_URL=mssql://sa:$SA_PASSWORD@localhost:1433/${{ matrix.service }}_test" >> "$GITHUB_ENV"
+          docker run -d --name sqlserver -p 1433:1433 \
+            -e ACCEPT_EULA=Y -e MSSQL_SA_PASSWORD="$SA_PASSWORD" \
+            mcr.microsoft.com/mssql/server:2022-latest
+          for i in $(seq 1 30); do
+            if docker exec -e SQLCMDPASSWORD="$SA_PASSWORD" sqlserver \
+                /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -Q "SELECT 1" > /dev/null 2>&1; then
+              echo "SQL Server is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "SQL Server did not start in 60 seconds"
+          docker logs sqlserver
+          exit 1
+
+      # The tests create the test database, run the migrations, and fail the job if
+      # coverage of the service's code is under 70%.
+      - name: Test with coverage
+        run: uv run pytest ${{ matrix.cov }} --cov-report=term-missing --cov-fail-under=70
+
+  # The system description must follow its schemas (pinned tool versions, run with uvx).
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.15"
+      - name: Check system.yaml against system.schema.json
+        run: uvx check-jsonschema@0.39.0 --schemafile system.schema.json system.yaml
+      - name: Check both OpenAPI documents
+        run: uvx --from openapi-spec-validator==0.9.0 openapi-spec-validator services/dives/openapi.yaml services/sites/openapi.yaml
+
+  # Every image must build. A broken Dockerfile (e.g. a COPY of a missing file) fails here.
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [dives, sites]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the ${{ matrix.service }} image
+        run: docker build -t ${{ matrix.service }}:${{ github.sha }} services/${{ matrix.service }}

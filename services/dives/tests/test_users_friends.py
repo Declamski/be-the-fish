@@ -2,7 +2,6 @@ import pytest
 
 import users
 
-
 # The conn fixture is in conftest.py: an empty SQL Server test database.
 
 

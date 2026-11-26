@@ -89,8 +89,7 @@ def get_dive_social(conn, dive_id, viewer_id):
 
 def get_feed_page(conn, viewer_id, offset):
     """One page of the feed: dives viewer_id may see, with owner name and counts."""
-    if offset < 0:
-        offset = 0
+    offset = max(offset, 0)
     result = dives_service.list_feed_dives(conn, viewer_id, offset, FEED_PAGE_SIZE)
 
     items = []

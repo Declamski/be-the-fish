@@ -1,9 +1,8 @@
 import pytest
+from conftest import FAKE_SITES
 
 import users
 from dives import service
-from conftest import FAKE_SITES
-
 
 # The conn fixture is in conftest.py: an empty SQL Server test database.
 

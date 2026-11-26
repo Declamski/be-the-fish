@@ -2,13 +2,14 @@ import logging
 import time
 
 import flask
-from config import load_config
+
 import db
-import migrate
-import health
-import users
 import dives
 import feed
+import health
+import migrate
+import users
+from config import load_config
 
 
 def create_app(config=None):

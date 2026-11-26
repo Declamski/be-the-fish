@@ -1,6 +1,5 @@
 import db
 
-
 # --- kudos ---
 
 def insert_kudos(conn, dive_id, user_id):
