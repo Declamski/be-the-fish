@@ -62,7 +62,7 @@ RG=rg-$PREFIX
 LOCATION=italynorth                 # must be on the subscription's allowed-regions list
 UI_STORAGE=dvandamieu2024ui
 SQL_SERVER=$PREFIX-sql
-GH_REPO=Declamski/sdd-assignment1.py
+GH_REPO=Declamski/be-the-fish
 ```
 
 **1. Subscription and region** (own Azure for Students subscription)
@@ -153,7 +153,7 @@ az identity federated-credential create --name github-main --identity-name $PREF
   --subject "repo:${GH_REPO}:ref:refs/heads/main" --audiences api://AzureADTokenExchange
 az identity federated-credential create --name github-main-ids --identity-name $PREFIX-github \
   --resource-group $RG --issuer https://token.actions.githubusercontent.com \
-  --subject "repo:Declamski@189633300/sdd-assignment1.py@1387287070:ref:refs/heads/main" \
+  --subject "repo:Declamski@189633300/be-the-fish@1387287070:ref:refs/heads/main" \
   --audiences api://AzureADTokenExchange
 ```
 

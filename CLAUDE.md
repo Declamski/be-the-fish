@@ -3,7 +3,7 @@
 Strava-style logbook for scuba divers, freedivers and spearfishers. Built by Declan (student).
 Assignment 1 (Flask + SQLite monolith) is finished and on `main`. Assignment 2 splits it into
 two services, containerises it, adds migrations and CI/CD, and deploys it to Azure.
-Deadline: **2026-11-22 23:59 (Europe/Madrid)**. Graded coursework — read the rules below first.
+Deadline: **2026-11-29 23:59 (Europe/Madrid)** (moved from 22 Nov). Graded coursework — read the rules below first.
 
 Detailed context — read the relevant one before working on that area:
 - @docs/ASSIGNMENT2.md — A2 requirements, Azure contract, CI/CD, grading, what is banned

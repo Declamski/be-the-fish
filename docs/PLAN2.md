@@ -1,6 +1,6 @@
 # Assignment 2 — plan & status
 
-Deadline **Sun 2026-11-22 23:59 (Madrid)**. Work on branch `a2-split`, merge to `main` via PRs.
+Deadline **Sun 2026-11-29 23:59 (Madrid)** (moved from 22 Nov). Work on branch `a2-split`, merge to `main` via PRs.
 
 ## Commit cadence (hard constraint)
 - No A2 commits existed on 2026-11-17, and Tue 17 → Sun 22 is exactly **6 days**, so there must
@@ -59,7 +59,7 @@ Deadline **Sun 2026-11-22 23:59 (Madrid)**. Work on branch `a2-split`, merge to 
   while the PDF says Azure **Static Web Apps** (`<prefix>-ui`). `static_web_app` fails schema
   validation (`additionalProperties: false`). Following the schema until told otherwise.
 - ~~Class service principal~~ → own managed identity + OIDC (guide step 6).
-- GitHub repo is `Declamski/sdd-assignment1.py` (same repo as A1, required).
+- GitHub repo is `Declamski/be-the-fish` (same repo as A1, renamed from sdd-assignment1.py on ~26 Nov; ids unchanged: owner 189633300, repo 1387287070). Local clone: /Users/declanvandam/be-the-fish.
 
 ## Status log
 - 2026-11-17: read the brief; docs set up (CLAUDE.md for A2, ASSIGNMENT2.md, PLAN2.md, A1 docs
@@ -104,3 +104,4 @@ Deadline **Sun 2026-11-22 23:59 (Madrid)**. Work on branch `a2-split`, merge to 
   free-offer SQL DBs, contained users, professors get Reader. Allowed regions: spaincentral,
   belgiumcentral, austriaeast, italynorth, switzerlandnorth. Providers not registered yet.
   `sqlcmd` not installed locally (use the mssql Docker image).
+- 2026-11-26: deadline is now Sun 29 Nov. State: main = A1 only, a2-split stops at 70b3d19 (19 Nov), no tag, Azure not set up. Nothing done 20-25 Nov.
