@@ -60,6 +60,8 @@ bash
 PREFIX=dvandam-ieu2024
 RG=rg-$PREFIX
 LOCATION=italynorth                 # must be on the subscription's allowed-regions list
+SQL_LOCATION=austriaeast            # see the note in step 4
+APP_LOCATION=austriaeast            # Container Apps next to the database
 UI_STORAGE=dvandamieu2024ui
 SQL_SERVER=$PREFIX-sql
 GH_REPO=Declamski/be-the-fish
@@ -85,17 +87,29 @@ az group create --name $RG --location $LOCATION
 az storage account create --name $UI_STORAGE --resource-group $RG --location $LOCATION \
   --kind StorageV2 --sku Standard_LRS
 az storage blob service-properties update --account-name $UI_STORAGE \
-  --static-website --index-document index.html
+  --static-website --index-document index.html --auth-mode login
 UI_URL=$(az storage account show --name $UI_STORAGE --resource-group $RG \
   --query primaryEndpoints.web -o tsv)
 echo $UI_URL
 ```
 
-**4. SQL server and two serverless databases** (free offer; passwords: letters and digits
-only, 12+ characters with upper case, lower case and digits)
+**4. SQL server and two serverless databases** (DB user passwords: letters and digits
+only, 12+ characters with upper case, lower case and digits, because they go inside the
+`mssql://` connection URL)
+
+Region and free offer: on this subscription (checked 2026-11-26) `italynorth` and
+`switzerlandnorth` refuse new SQL servers (`RegionDoesNotAllowProvisioning`), and
+`belgiumcentral` and `austriaeast` answer "Provisioning of free limit database is not
+supported" (the guide says the same for `spaincentral`). So the SQL server is in
+`austriaeast` and the databases use the brief's settings (§7.3) instead of the free offer:
+serverless, auto-pause at the shortest delay Azure allows for this size (60 minutes; 15 is
+refused) and max 2 GB. Note: a failed `az sql server create` leaves the name tied to that
+region inside the resource group, so check a region first with
+`az rest --method get --url "https://management.azure.com/subscriptions/<id>/providers/Microsoft.Sql/locations/<region>/capabilities?api-version=2021-11-01" --query status`
+(it must say `Available`).
 ```bash
 read -s -p "SQL admin password: " SQL_ADMIN_PASSWORD; echo
-az sql server create --name $SQL_SERVER --resource-group $RG --location $LOCATION \
+az sql server create --name $SQL_SERVER --resource-group $RG --location $SQL_LOCATION \
   --admin-user sqladmin --admin-password "$SQL_ADMIN_PASSWORD"
 az sql server firewall-rule create --resource-group $RG --server $SQL_SERVER \
   --name AllowAzureServices --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0
@@ -103,7 +117,7 @@ for svc in dives sites; do
   az sql db create --resource-group $RG --server $SQL_SERVER --name $PREFIX-$svc-db \
     --edition GeneralPurpose --compute-model Serverless --family Gen5 \
     --min-capacity 0.5 --capacity 1 --backup-storage-redundancy Local \
-    --use-free-limit true --free-limit-exhaustion-behavior AutoPause
+    --auto-pause-delay 60 --max-size 2GB
 done
 ```
 One contained user per database, which can only reach its own database. The firewall is
@@ -129,7 +143,7 @@ az sql server firewall-rule delete --resource-group $RG --server $SQL_SERVER --n
 
 **5. Container Apps** (placeholder image until the first deploy; min 0, max 1 replica)
 ```bash
-az containerapp env create --name $PREFIX-env --resource-group $RG --location $LOCATION
+az containerapp env create --name $PREFIX-env --resource-group $RG --location $APP_LOCATION
 for svc in dives sites; do
   az containerapp create --name $PREFIX-$svc --resource-group $RG --environment $PREFIX-env \
     --image mcr.microsoft.com/k8se/quickstart:latest --target-port 8000 --ingress external \
@@ -141,7 +155,7 @@ are set by the CD workflow on every deploy, from GitHub secrets.
 
 **6. The pipeline's identity** (managed identity + GitHub OIDC, no stored Azure password)
 ```bash
-az identity create --name $PREFIX-github --resource-group $RG --location $LOCATION
+az identity create --name $PREFIX-github --resource-group $RG --location $APP_LOCATION
 CLIENT_ID=$(az identity show --name $PREFIX-github --resource-group $RG --query clientId -o tsv)
 PRINCIPAL_ID=$(az identity show --name $PREFIX-github --resource-group $RG --query principalId -o tsv)
 RG_ID=$(az group show --name $RG --query id -o tsv)
