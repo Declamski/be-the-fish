@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dive site - Be the Fish</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</head>
+<body>
+<header class="site-header" id="nav"></header>
+<main class="container">
+    <p class="card-meta"><a href="sites.html">&larr; All sites</a></p>
+    <p id="error" class="error" hidden></p>
+    <div id="site"><p class="muted">Loading…</p></div>
+</main>
+<script>
+    renderNav();
+
+    async function loadSite() {
+        const box = document.getElementById("site");
+        try {
+            const site = await api("sites", "GET", "/api/sites/" + encodeURIComponent(getParam("id")));
+            box.innerHTML = '<h1>' + escapeHtml(site.name) + '</h1>' +
+                '<p><span class="badge">' + escapeHtml(site.location) + '</span></p>' +
+                (site.description ? '<div class="card"><p>' + escapeHtml(site.description) + '</p></div>' : '');
+        } catch (error) {
+            box.innerHTML = "";
+            showError(error.message);
+        }
+    }
+
+    loadSite();
+</script>
+</body>
+</html>

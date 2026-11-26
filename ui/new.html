@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Log a dive - Be the Fish</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</head>
+<body>
+<header class="site-header" id="nav"></header>
+<main class="container">
+    <h1>Log a dive</h1>
+    <p class="muted">Got a file from your dive computer? <a href="import.html">Import a Subsurface CSV instead</a>.</p>
+    <p id="error" class="error" hidden></p>
+
+    <form id="dive-form" class="form">
+        <fieldset>
+            <legend>The dive</legend>
+            <label>Discipline
+                <select name="discipline" id="discipline">
+                    <option value="scuba">Scuba</option>
+                    <option value="freedive">Freedive</option>
+                    <option value="spearfishing">Spearfishing</option>
+                </select>
+            </label>
+            <label>Started at <input type="datetime-local" name="started_at" required></label>
+            <label>Who can see this dive <select name="audience" id="audience-select"></select></label>
+            <label>Notes <textarea name="notes"></textarea></label>
+        </fieldset>
+
+        <fieldset>
+            <legend>Site and conditions (optional)</legend>
+            <label>Site <select name="site_id" id="site-select"></select></label>
+            <span class="hint" id="site-note"></span>
+            <label>Visibility <select name="visibility" id="visibility-select"></select></label>
+            <label>Current <select name="current" id="current-select"></select></label>
+        </fieldset>
+
+        <fieldset id="scuba-fields">
+            <legend>Scuba</legend>
+            <label>Max depth (m) <input type="number" step="0.1" min="0" name="max_depth_m"></label>
+            <label>Duration (minutes) <input type="number" step="1" min="0" name="duration_min"></label>
+            <label>Water temperature (&deg;C) <input type="number" step="0.1" name="water_temp_c"></label>
+        </fieldset>
+
+        <fieldset id="session-fields" hidden>
+            <legend>Descents in this session</legend>
+            <ul id="descent-list" class="card-list"></ul>
+            <label>Depth (m) <input type="number" step="0.1" min="0" id="descent-depth"></label>
+            <label>Duration (seconds) <input type="number" min="0" id="descent-seconds"></label>
+            <span class="hint">Breath-holds are short, so descents are in seconds.</span>
+            <button type="button" class="secondary" id="add-descent">Add descent</button>
+        </fieldset>
+
+        <button type="submit">Save dive</button>
+    </form>
+</main>
+<script>
+    requireLogin();
+    renderNav();
+
+    // Descents are kept here in the browser until the whole session is saved at once.
+    const descents = [];
+
+    async function setUpForm() {
+        try {
+            const options = await api("dives", "GET", "/api/dives/options");
+            fillSelect(document.getElementById("audience-select"), options.audiences, "private");
+            fillSelect(document.getElementById("visibility-select"), options.visibility_levels, null, "Not recorded");
+            fillSelect(document.getElementById("current-select"), options.current_levels, null, "Not recorded");
+        } catch (error) {
+            showError(error.message);
+        }
+        fillSiteSelect(document.getElementById("site-select"), null, document.getElementById("site-note"));
+    }
+
+    // Scuba shows depth/time/temperature; freedive and spearfishing show the descents.
+    function showFieldsFor(discipline) {
+        const isScuba = discipline === "scuba";
+        document.getElementById("scuba-fields").hidden = !isScuba;
+        document.getElementById("session-fields").hidden = isScuba;
+    }
+
+    function showDescents() {
+        let html = "";
+        descents.forEach(function (descent, index) {
+            html += '<li class="card"><span class="card-title">Descent ' + (index + 1) + '</span>' +
+                '<div class="stats">' + stat("Depth", formatNumber(descent.depth_m, "m")) +
+                stat("Time", formatDuration(descent.duration_s)) + '</div></li>';
+        });
+        document.getElementById("descent-list").innerHTML = html || '<li class="card muted">No descents added yet.</li>';
+    }
+
+    document.getElementById("discipline").addEventListener("change", function (event) {
+        showFieldsFor(event.target.value);
+    });
+
+    document.getElementById("add-descent").addEventListener("click", function () {
+        const depth = document.getElementById("descent-depth");
+        const seconds = document.getElementById("descent-seconds");
+        if (!depth.value || !seconds.value) {
+            showError("Fill in the descent's depth and duration first");
+            return;
+        }
+        showError("");
+        // The service checks the values again when the session is saved.
+        descents.push({ depth_m: Number(depth.value), duration_s: Number(seconds.value) });
+        depth.value = "";
+        seconds.value = "";
+        showDescents();
+    });
+
+    document.getElementById("dive-form").addEventListener("submit", async function (event) {
+        event.preventDefault();
+        showError("");
+        const fields = Object.fromEntries(new FormData(event.target));
+        const dive = {
+            discipline: fields.discipline,
+            started_at: fields.started_at,
+            audience: fields.audience,
+            notes: fields.notes,
+            site_id: fields.site_id,
+            visibility: fields.visibility,
+            current: fields.current,
+        };
+        if (fields.discipline === "scuba") {
+            dive.max_depth_m = fields.max_depth_m;
+            dive.water_temp_c = fields.water_temp_c;
+            // The form asks for minutes; the service stores seconds.
+            if (fields.duration_min) {
+                dive.duration_s = Math.round(Number(fields.duration_min) * 60);
+            }
+        } else {
+            dive.descents = descents;
+        }
+        try {
+            const result = await api("dives", "POST", "/api/dives", dive);
+            window.location.href = "dive.html?id=" + result.id;
+        } catch (error) {
+            showError(error.message);
+        }
+    });
+
+    setUpForm();
+    showDescents();
+</script>
+</body>
+</html>

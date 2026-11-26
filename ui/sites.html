@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dive sites - Be the Fish</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</head>
+<body>
+<header class="site-header" id="nav"></header>
+<main class="container">
+    <h1>Dive sites</h1>
+    <p id="error" class="error" hidden></p>
+    <div class="form">
+        <label>Search <input type="search" id="search" placeholder="Name or location" autocomplete="off"></label>
+    </div>
+    <ul id="site-list" class="card-list"><li class="card muted">Loading…</li></ul>
+    <p class="muted">Missing a site? Contact the admin to have it added.</p>
+</main>
+<script>
+    renderNav();  // the site list is public: no login needed
+
+    // Asks the sites service directly (the UI calls both services).
+    async function loadSites(query) {
+        const list = document.getElementById("site-list");
+        try {
+            const sites = await api("sites", "GET", "/api/sites?q=" + encodeURIComponent(query));
+            showError("");
+            let html = "";
+            for (const site of sites) {
+                html += '<li class="card"><a class="card-title" href="site.html?id=' + site.id + '">' +
+                    escapeHtml(site.name) + '</a><br><span class="card-meta">' + escapeHtml(site.location) + '</span></li>';
+            }
+            list.innerHTML = html || '<li class="card muted">No sites match your search.</li>';
+        } catch (error) {
+            list.innerHTML = "";
+            showError(error.message);
+        }
+    }
+
+    // Search again every time the text changes.
+    document.getElementById("search").addEventListener("input", function (event) {
+        loadSites(event.target.value);
+    });
+    loadSites("");
+</script>
+</body>
+</html>

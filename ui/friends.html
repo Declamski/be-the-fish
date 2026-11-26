@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Friends - Be the Fish</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</head>
+<body>
+<header class="site-header" id="nav"></header>
+<main class="container">
+    <h1>Friends</h1>
+    <p id="error" class="error" hidden></p>
+
+    <h2>Find people</h2>
+    <div class="form">
+        <label>Search by name <input type="search" id="search" placeholder="Start typing a name" autocomplete="off"></label>
+    </div>
+    <ul id="search-results" class="card-list"></ul>
+
+    <h2>Requests for you</h2>
+    <ul id="incoming" class="card-list"></ul>
+    <h2>Your friends</h2>
+    <ul id="friends" class="card-list"></ul>
+    <h2>Requests you sent</h2>
+    <ul id="outgoing" class="card-list"></ul>
+</main>
+<script>
+    requireLogin();
+    renderNav();
+
+    // One person in a list, with the buttons that fit (each button is [label, method, path, style]).
+    function personHtml(person, buttons) {
+        let html = '<li class="card row"><span class="card-title">' + escapeHtml(person.name) + '</span><span class="row-buttons">';
+        for (const button of buttons) {
+            html += '<button type="button" class="' + button[3] + '" onclick="change(\'' + button[1] + '\', \'' +
+                button[2] + '\')">' + button[0] + '</button>';
+        }
+        return html + '</span></li>';
+    }
+
+    function listHtml(people, makeButtons, emptyText) {
+        let html = "";
+        for (const person of people) {
+            html += personHtml(person, makeButtons(person));
+        }
+        return html || '<li class="card muted">' + emptyText + '</li>';
+    }
+
+    async function loadFriends() {
+        let lists;
+        try {
+            lists = await api("dives", "GET", "/api/friends");
+        } catch (error) {
+            showError(error.message);
+            return;
+        }
+        document.getElementById("incoming").innerHTML = listHtml(lists.incoming, function (person) {
+            return [["Accept", "POST", "/api/friends/" + person.id + "/accept", ""],
+                    ["Decline", "DELETE", "/api/friends/" + person.id, "secondary"]];
+        }, "No requests.");
+        document.getElementById("friends").innerHTML = listHtml(lists.friends, function (person) {
+            return [["Remove friend", "DELETE", "/api/friends/" + person.id, "secondary"]];
+        }, "No friends yet. Search for someone above.");
+        document.getElementById("outgoing").innerHTML = listHtml(lists.outgoing, function (person) {
+            return [["Cancel", "DELETE", "/api/friends/" + person.id, "secondary"]];
+        }, "No pending requests.");
+    }
+
+    // Search results show a different button depending on the friend status.
+    async function search(query) {
+        const results = document.getElementById("search-results");
+        if (!query.trim()) {
+            results.innerHTML = "";
+            return;
+        }
+        try {
+            const people = await api("dives", "GET", "/api/friends/search?q=" + encodeURIComponent(query));
+            let html = "";
+            for (const person of people) {
+                if (person.status === "none") {
+                    html += personHtml(person, [["Add friend", "POST", "/api/friends/" + person.id + "/request", ""]]);
+                } else if (person.status === "received") {
+                    html += personHtml(person, [["Accept request", "POST", "/api/friends/" + person.id + "/accept", ""]]);
+                } else if (person.status === "sent") {
+                    html += '<li class="card row"><span class="card-title">' + escapeHtml(person.name) + '</span><span class="muted">Request sent</span></li>';
+                } else {
+                    html += '<li class="card row"><span class="card-title">' + escapeHtml(person.name) + '</span><span class="badge">Friends</span></li>';
+                }
+            }
+            results.innerHTML = html || '<li class="card muted">No one matches "' + escapeHtml(query) + '".</li>';
+        } catch (error) {
+            showError(error.message);
+        }
+    }
+
+    // Send a request / accept / remove, then refresh both the lists and the search results.
+    async function change(method, path) {
+        showError("");
+        try {
+            await api("dives", method, path);
+        } catch (error) {
+            showError(error.message);
+        }
+        loadFriends();
+        search(document.getElementById("search").value);
+    }
+
+    document.getElementById("search").addEventListener("input", function (event) {
+        search(event.target.value);
+    });
+    loadFriends();
+</script>
+</body>
+</html>

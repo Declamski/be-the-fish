@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Import dives - Be the Fish</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</head>
+<body>
+<header class="site-header" id="nav"></header>
+<main class="container">
+    <h1>Import dives from a file</h1>
+    <p class="muted"><a href="new.html">Log a dive by hand instead</a></p>
+    <p id="error" class="error" hidden></p>
+    <div id="summary" class="message" hidden></div>
+    <form id="import-form" class="form">
+        <label>Subsurface CSV export <input type="file" name="file" accept=".csv" required></label>
+        <label>Discipline
+            <select name="discipline_override">
+                <option value="">Use whatever the file says</option>
+                <option value="scuba">Force all rows to scuba</option>
+                <option value="freedive">Force all rows to freedive</option>
+                <option value="spearfishing">Force all rows to spearfishing</option>
+            </select>
+        </label>
+        <span class="hint">Only override if the watch recorded the whole file in the wrong mode.</span>
+        <button type="submit">Import</button>
+    </form>
+    <h2>Getting a CSV out of your dive computer</h2>
+    <ol>
+        <li>Open your <code>.fit</code> files in Subsurface (free desktop app).</li>
+        <li>File &rarr; Export &rarr; CSV summary.</li>
+        <li>Upload that file here.</li>
+    </ol>
+    <p class="muted">Importing the same file twice is safe: dives already in your log are skipped.</p>
+</main>
+<script>
+    requireLogin();
+    renderNav();
+
+    document.getElementById("import-form").addEventListener("submit", async function (event) {
+        event.preventDefault();
+        showError("");
+        const box = document.getElementById("summary");
+        box.hidden = true;
+        try {
+            // FormData sends the file as a normal file upload (multipart).
+            const summary = await api("dives", "POST", "/api/dives/import", new FormData(event.target));
+            box.innerHTML = '<p><strong>Import finished.</strong></p><ul>' +
+                '<li>' + summary.imported + ' dive(s) added</li>' +
+                '<li>' + summary.skipped_duplicate + ' already in your log, skipped</li>' +
+                '<li>' + summary.skipped_invalid + ' row(s) skipped: missing depth, duration or date</li>' +
+                '</ul><p><a href="dives.html">See your dives</a></p>';
+            box.hidden = false;
+        } catch (error) {
+            showError(error.message);
+        }
+    });
+</script>
+</body>
+</html>

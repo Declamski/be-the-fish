@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My dives - Be the Fish</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</head>
+<body>
+<header class="site-header" id="nav"></header>
+<main class="container">
+    <h1>My dives</h1>
+    <p id="error" class="error" hidden></p>
+    <div class="page-actions">
+        <a class="button" href="new.html">Log a dive</a>
+        <a class="button secondary" href="import.html">Import from a file</a>
+    </div>
+    <ul id="dive-list" class="card-list"><li class="card muted">Loading…</li></ul>
+</main>
+<script>
+    requireLogin();
+    renderNav();
+
+    async function loadDives() {
+        const list = document.getElementById("dive-list");
+        try {
+            const dives = await api("dives", "GET", "/api/dives");
+            if (dives.length === 0) {
+                list.innerHTML = '<li class="card muted">No dives logged yet. <a href="new.html">Log your first one</a>.</li>';
+                return;
+            }
+            let html = "";
+            for (const dive of dives) {
+                html += '<li class="card">' +
+                    '<a class="card-title" href="dive.html?id=' + dive.id + '">' + escapeHtml(formatDateTime(dive.started_at)) + '</a> ' +
+                    '<span class="badge">' + escapeHtml(dive.discipline) + '</span> ' +
+                    '<span class="card-meta">&middot; ' + escapeHtml(dive.audience) + '</span>' +
+                    '<div class="stats">' +
+                    stat("Max depth", formatNumber(dive.max_depth_m, "m")) +
+                    stat("Time", formatDuration(dive.duration_s)) +
+                    (dive.water_temp_c !== null ? stat("Water", formatNumber(dive.water_temp_c, "°C")) : "") +
+                    '</div></li>';
+            }
+            list.innerHTML = html;
+        } catch (error) {
+            list.innerHTML = "";
+            showError(error.message);
+        }
+    }
+
+    loadDives();
+</script>
+</body>
+</html>

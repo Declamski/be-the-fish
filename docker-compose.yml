@@ -1,4 +1,4 @@
-# The whole system locally: docker compose up --build
+# The whole system locally: docker compose up --build, then open http://localhost:8080
 # Passwords come from a .env file next to this one (copy .env.example to .env first).
 
 services:
@@ -47,6 +47,7 @@ services:
     environment:
       PORT: "8000"
       DATABASE_URL: mssql://sites_user:${SITES_DB_PASSWORD}@sqlserver:1433/sites
+      CORS_ORIGIN: http://localhost:8080
     ports:
       - "8001:8000"
 
@@ -61,8 +62,18 @@ services:
       SECRET_KEY: ${SECRET_KEY:?set it in .env (see .env.example)}
       SITES_URL: http://sites:8000
       SITES_TIMEOUT_S: "2"
+      CORS_ORIGIN: http://localhost:8080
     ports:
       - "8000:8000"
+
+  # The static UI, served as plain files by a stock web server (no Dockerfile, and not
+  # one of the two service containers). The browser then calls dives and sites itself.
+  ui:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./ui:/usr/share/nginx/html:ro
+    ports:
+      - "8080:80"
 
 volumes:
   sqlserver-data:
