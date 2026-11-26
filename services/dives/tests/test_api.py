@@ -169,3 +169,10 @@ def test_cors_preflight_is_answered(app, conn):
         "Origin": "http://ui.test", "Access-Control-Request-Method": "POST"})
     assert response.status_code == 200
     assert "Authorization" in response.headers["Access-Control-Allow-Headers"]
+
+
+def test_root_says_which_service_this_is(app):
+    response = app.test_client().get("/")
+    assert response.status_code == 200
+    assert response.get_json()["service"] == "dives"
+    assert "version" in response.get_json()

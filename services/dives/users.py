@@ -6,7 +6,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 import db
 
-bp = flask.Blueprint("users", __name__)
 # JSON API for the static UI. Logged-in requests carry "Authorization: Bearer <token>".
 api_bp = flask.Blueprint("users_api", __name__, url_prefix="/api")
 
@@ -51,16 +50,6 @@ def authenticate(conn, email, password):
 
 def get_connection():
     return flask.g.db
-
-
-def get_current_user(conn):
-    user_id = flask.session.get("user_id")
-    if user_id is None:
-        return None
-    row = db.query_one(conn, "SELECT id, email, name FROM users WHERE id = %s", (user_id,))
-    if row is None:
-        return None
-    return {"id": row["id"], "email": row["email"], "name": row["name"]}
 
 
 def get_user_name(conn, user_id):
@@ -254,113 +243,6 @@ def token_required(view_func):
         flask.g.user_id = user_id
         return view_func(*args, **kwargs)
     return wrapped_view
-
-
-def login_required(view_func):
-    @functools.wraps(view_func)
-    def wrapped_view(*args, **kwargs):
-        if flask.session.get("user_id") is None:
-            return flask.redirect("/login")
-        return view_func(*args, **kwargs)
-    return wrapped_view
-
-
-@bp.route("/signup", methods=["GET", "POST"])
-def signup():
-    if flask.request.method == "GET":
-        return flask.render_template("signup.html")
-
-    email = flask.request.form.get("email", "")
-    name = flask.request.form.get("name", "")
-    password = flask.request.form.get("password", "")
-
-    try:
-        user_id = create_user(get_connection(), email, name, password)
-    except ValueError as e:
-        return flask.render_template("signup.html", error=str(e)), 400
-
-    flask.session["user_id"] = user_id
-    return flask.redirect("/")
-
-
-@bp.route("/login", methods=["GET", "POST"])
-def login():
-    if flask.request.method == "GET":
-        return flask.render_template("login.html")
-
-    email = flask.request.form.get("email", "")
-    password = flask.request.form.get("password", "")
-
-    user = authenticate(get_connection(), email, password)
-    if user is None:
-        return flask.render_template("login.html", error="Invalid email or password"), 400
-
-    flask.session["user_id"] = user["id"]
-    return flask.redirect("/")
-
-
-@bp.route("/logout", methods=["POST"])
-def logout():
-    flask.session.pop("user_id", None)
-    return flask.redirect("/login")
-
-
-def render_friends_page(error=None, status=200):
-    conn = get_connection()
-    user_id = flask.session["user_id"]
-    return flask.render_template(
-        "friends.html",
-        error=error,
-        friends=list_friends(conn, user_id),
-        incoming=list_incoming_requests(conn, user_id),
-        outgoing=list_outgoing_requests(conn, user_id),
-    ), status
-
-
-@bp.route("/friends", methods=["GET"])
-@login_required
-def friends_page():
-    return render_friends_page()
-
-
-@bp.route("/friends/search", methods=["GET"])
-@login_required
-def friends_search():
-    # Returns only a piece of HTML. static/live_search.js puts it into the
-    # friends page while the user types.
-    query = flask.request.args.get("q", "")
-    results = search_users(get_connection(), flask.session["user_id"], query)
-    return flask.render_template("friends_search_results.html", results=results, query=query)
-
-
-@bp.route("/friends/<int:other_id>/request", methods=["POST"])
-@login_required
-def friends_request(other_id):
-    try:
-        send_friend_request(get_connection(), flask.session["user_id"], other_id)
-    except ValueError as e:
-        return render_friends_page(error=str(e), status=400)
-    return flask.redirect("/friends")
-
-
-@bp.route("/friends/<int:other_id>/accept", methods=["POST"])
-@login_required
-def friends_accept(other_id):
-    try:
-        accept_friend_request(get_connection(), flask.session["user_id"], other_id)
-    except ValueError as e:
-        return render_friends_page(error=str(e), status=400)
-    return flask.redirect("/friends")
-
-
-@bp.route("/friends/<int:other_id>/remove", methods=["POST"])
-@login_required
-def friends_remove(other_id):
-    try:
-        remove_friend(get_connection(), flask.session["user_id"], other_id)
-    except ValueError as e:
-        return render_friends_page(error=str(e), status=400)
-    return flask.redirect("/friends")
 
 
 # --- JSON API ---

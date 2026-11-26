@@ -9,7 +9,6 @@ import health
 import users
 import dives
 import feed
-import formatting
 
 
 def create_app(config=None):
@@ -37,7 +36,8 @@ def create_app(config=None):
     def start_request():
         flask.g.start_time = time.perf_counter()
         # /health opens its own quick connection (health.py), so it can answer 503 fast.
-        if flask.request.endpoint == "health.health":
+        # / does not use the database at all.
+        if flask.request.endpoint in ("health.health", "index"):
             return
         flask.g.db = db.get_connection(app.config["DATABASE_URL"])
 
@@ -65,31 +65,15 @@ def create_app(config=None):
             conn.close()
 
     app.register_blueprint(health.bp)
-    app.register_blueprint(users.bp)
-    app.register_blueprint(dives.bp)
-    app.register_blueprint(feed.bp)
     app.register_blueprint(users.api_bp)
     app.register_blueprint(dives.api_bp)
     app.register_blueprint(feed.api_bp)
 
-    # Readable numbers and dates in templates, e.g. {{ dive.duration_s | duration }}.
-    app.jinja_env.filters["duration"] = formatting.format_duration
-    app.jinja_env.filters["datetime"] = formatting.format_datetime
-    app.jinja_env.filters["number"] = formatting.format_number
-
-    # Every template gets current_user, so base.html can show the nav bar,
-    # and sites_url, so links to site pages go to the sites service.
-    @app.context_processor
-    def add_template_values():
-        return {
-            "current_user": users.get_current_user(flask.g.db),
-            "sites_url": app.config["SITES_URL"],
-        }
-
     @app.route("/")
     def index():
-        user = users.get_current_user(flask.g.db)
-        return flask.render_template("index.html", user=user)
+        """Someone opening the service's address in a browser sees which service and
+        which build this is. The real pages are the static UI."""
+        return flask.jsonify({"service": "dives", "version": app.config["VERSION"]})
 
     return app
 

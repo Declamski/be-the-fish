@@ -50,9 +50,12 @@ Detailed context — read the relevant one before working on that area:
    Alongside each AI_USAGE row, append an entry to `notes_from_AI.md`: what it does in plain
    English, why this approach, alternatives considered.
 5. **Git:**
-   - **Never run `git add`, `git commit`, `git push`, `git tag` or open PRs.** The student does
-     all of these themselves. You may propose a descriptive commit message (what and why).
-     No `Co-Authored-By` trailer in any proposed message.
+   - **Claude commits and pushes** (changed 2026-11-26; before that the student did all git).
+     Every commit and PR is **strictly without contributors**: no `Co-Authored-By` trailer, no
+     "Generated with Claude Code" line, no AI name anywhere in the message or PR body. Commits use
+     the repo's normal git identity (the student), never a Claude author/committer. Messages are
+     descriptive (what and why). Stage explicit paths only (never `git add -A`/`.`), since
+     another thread may share the working tree. `git tag submission` stays the student's call.
    - Never suggest `--amend` on pushed commits, `rebase`, `reset --hard`, force-push, or setting
      `GIT_AUTHOR_DATE`/`GIT_COMMITTER_DATE`. Backdated history is an academic-integrity violation.
    - Never propose "Initial commit", "WIP", "update", "fix" as a message.
@@ -110,7 +113,7 @@ Each service folder will hold: its package(s), `app.py`, `config.py`, `db.py`,
   creating/editing a dive with a site returns a clear error. Never a stack trace or a hang.
 - `dives.site_id` is a plain integer (no FK across the seam); integrity is checked in code
   through the sites API. Users, kudos and comments live in the dives database.
-- Layer rules inside each service stay as in A1: `routes.py` thin (parse → service → JSON),
+- Layer rules inside each service stay as in A1: `api.py` thin (parse → service → JSON),
   `service.py` holds all logic and validation (what tests target), `repository.py` holds
   all SQL for that package's own tables. Services raise `ValueError`; routes turn it into a
   4xx JSON error.
@@ -211,8 +214,9 @@ cd services/sites && TEST_DATABASE_URL=mssql://sa:...@localhost:1433/sites_test 
   `GET /api/sites/<id>`. Logged-in calls send `Authorization: Bearer <token>`;
   `users.token_required` answers 401 otherwise and sets `flask.g.user_id`. Tokens are signed
   with `SECRET_KEY` (itsdangerous), valid `TOKEN_MAX_AGE_S` = 7 days, nothing stored server-side.
-  Errors are `{"error": "..."}` with 400/401/404. The Jinja page routes (`routes.py`, cookie
-  login) stay until the static UI replaces them (Fri), then get deleted.
+  Errors are `{"error": "..."}` with 400/401/404. `GET /` on each service answers
+  `{"service": "<name>", "version": "<sha>"}` without touching the DB. No Jinja pages, templates,
+  static files or cookie login any more (deleted 2026-11-26); the pages are `ui/`.
 - CORS: `add_cors_headers` in each `app.py` allows only `CORS_ORIGIN` (default
   `http://localhost:8080`, the local UI).
 - SQL helpers live in each service's `db.py`: `query_one`, `query_all`, `execute`, `insert`

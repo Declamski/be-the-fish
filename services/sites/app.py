@@ -32,7 +32,8 @@ def create_app(config=None):
     def start_request():
         flask.g.start_time = time.perf_counter()
         # /health opens its own quick connection (health.py), so it can answer 503 fast.
-        if flask.request.endpoint == "health.health":
+        # / does not use the database at all.
+        if flask.request.endpoint in ("health.health", "index"):
             return
         flask.g.db = db.get_connection(app.config["DATABASE_URL"])
 
@@ -60,12 +61,13 @@ def create_app(config=None):
             conn.close()
 
     app.register_blueprint(health.bp)
-    app.register_blueprint(sites.bp)
     app.register_blueprint(sites.api_bp)
 
     @app.route("/")
     def index():
-        return flask.redirect("/sites")
+        """Someone opening the service's address in a browser sees which service and
+        which build this is. The real pages are the static UI."""
+        return flask.jsonify({"service": "sites", "version": app.config["VERSION"]})
 
     return app
 

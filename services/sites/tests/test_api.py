@@ -17,3 +17,10 @@ def test_get_unknown_site_is_404(app, conn):
 def test_cors_allows_only_the_ui(app, conn):
     response = app.test_client().get("/api/sites")
     assert response.headers["Access-Control-Allow-Origin"] == "http://ui.test"
+
+
+def test_root_says_which_service_this_is(app):
+    response = app.test_client().get("/")
+    assert response.status_code == 200
+    assert response.get_json()["service"] == "sites"
+    assert "version" in response.get_json()

@@ -17,12 +17,10 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 
 # Then the code, folder by folder (no "COPY . ." so tests, .venv and local files stay out).
-COPY app.py config.py db.py migrate.py health.py users.py formatting.py ./
+COPY app.py config.py db.py migrate.py health.py users.py ./
 COPY dives/ dives/
 COPY feed/ feed/
 COPY migrations/ migrations/
-COPY templates/ templates/
-COPY static/ static/
 
 # Run as an ordinary user, not root.
 RUN useradd --create-home app

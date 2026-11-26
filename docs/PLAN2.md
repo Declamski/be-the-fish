@@ -105,3 +105,9 @@ Deadline **Sun 2026-11-29 23:59 (Madrid)** (moved from 22 Nov). Work on branch `
   belgiumcentral, austriaeast, italynorth, switzerlandnorth. Providers not registered yet.
   `sqlcmd` not installed locally (use the mssql Docker image).
 - 2026-11-26: deadline is now Sun 29 Nov. State: main = A1 only, a2-split stops at 70b3d19 (19 Nov), no tag, Azure not set up. Nothing done 20-25 Nov.
+- 2026-11-26: repo renamed to Declamski/be-the-fish, new clone at /Users/declanvandam/be-the-fish (README Azure subjects updated). Static UI in `ui/` + nginx `ui` service in compose (port 8080). All flows tested in headless Chrome, incl. sites stopped. Next: delete Jinja pages/routes/cookie login, ADR-8.
+- 2026-11-26: Jinja pages deleted: `templates/`, `static/`, `dives/routes.py`, `feed/routes.py`,
+  `sites/routes.py` (its JSON routes moved to `sites/api.py`), `formatting.py` + its tests, cookie
+  login and page routes in `users.py`. `GET /` = `{"service", "version"}` JSON (no DB). Dockerfile
+  COPY lines updated; both images build. Tests: dives 135 (86%), sites 31 (89%).
+  Azure setup moved to the other thread ("A2 Azure Deployment Setup Guide"); this thread does not run az.

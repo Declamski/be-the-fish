@@ -20,8 +20,6 @@ RUN uv sync --frozen --no-dev
 COPY app.py config.py db.py migrate.py health.py ./
 COPY sites/ sites/
 COPY migrations/ migrations/
-COPY templates/ templates/
-COPY static/ static/
 
 # Run as an ordinary user, not root.
 RUN useradd --create-home app
