@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Feed - Be the Fish</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</head>
+<body>
+<header class="site-header" id="nav"></header>
+<main class="container">
+    <h1>Feed</h1>
+    <p class="muted">Your dives, your friends' dives, and everyone's public dives. Newest first.</p>
+    <p id="error" class="error" hidden></p>
+    <ul id="feed-list" class="card-list"></ul>
+    <p id="empty" class="card muted" hidden>Nothing here yet. <a href="new.html">Log a dive</a> or <a href="friends.html">add some friends</a>.</p>
+    <button type="button" class="secondary" id="load-more" hidden>Load more</button>
+</main>
+<script>
+    requireLogin();
+    renderNav();
+
+    // Where the next page starts. The service sends it back as next_offset.
+    let nextOffset = 0;
+
+    async function loadPage() {
+        showError("");
+        let page;
+        try {
+            page = await api("dives", "GET", "/api/feed?offset=" + nextOffset);
+        } catch (error) {
+            showError(error.message);
+            return;
+        }
+        let html = "";
+        for (const item of page.items) {
+            // site_label is empty if the dive has no site, or the sites service was down.
+            let title = escapeHtml(item.discipline) + " dive";
+            if (item.site_label) {
+                title = escapeHtml(item.site_label);
+            }
+            html += '<li class="card">' +
+                '<span class="card-meta">' + escapeHtml(item.owner_name) + ' &middot; ' + escapeHtml(formatDateTime(item.started_at)) + '</span><br>' +
+                '<a class="card-title" href="dive.html?id=' + item.id + '">' + title + '</a> ' +
+                '<span class="badge">' + escapeHtml(item.discipline) + '</span>' +
+                '<div class="stats">' +
+                stat("Max depth", formatNumber(item.max_depth_m, "m")) +
+                stat("Time", formatDuration(item.duration_s)) +
+                stat("Kudos", item.kudos_count) +
+                stat("Comments", item.comment_count) +
+                '</div></li>';
+        }
+        document.getElementById("feed-list").insertAdjacentHTML("beforeend", html);
+        document.getElementById("empty").hidden = !(nextOffset === 0 && page.items.length === 0);
+        document.getElementById("load-more").hidden = !page.has_more;
+        nextOffset = page.next_offset;
+    }
+
+    document.getElementById("load-more").addEventListener("click", loadPage);
+    loadPage();
+</script>
+</body>
+</html>

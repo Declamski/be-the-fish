@@ -1,0 +1,79 @@
+# The whole system locally: docker compose up --build, then open http://localhost:8080
+# Passwords come from a .env file next to this one (copy .env.example to .env first).
+
+services:
+
+  # One SQL Server holding both databases (dives and sites).
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64        # no ARM build exists; Apple Silicon runs it with Rosetta
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?set it in .env (see .env.example)}
+      SQLCMDPASSWORD: ${MSSQL_SA_PASSWORD}     # lets the healthcheck's sqlcmd log in
+    ports:
+      - "127.0.0.1:1433:1433"    # reachable from this computer only (tests, one service alone)
+    volumes:
+      - sqlserver-data:/var/opt/mssql          # data survives docker compose down / up
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-C", "-Q", "SELECT 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # One-off job: runs db/init.sql (databases + one login per service), then exits.
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    entrypoint: ["/opt/mssql-tools18/bin/sqlcmd"]
+    command: ["-S", "sqlserver", "-U", "sa", "-C", "-b", "-i", "/db/init.sql"]
+    environment:
+      SQLCMDPASSWORD: ${MSSQL_SA_PASSWORD}
+      DIVES_DB_PASSWORD: ${DIVES_DB_PASSWORD:?set it in .env (see .env.example)}
+      SITES_DB_PASSWORD: ${SITES_DB_PASSWORD:?set it in .env (see .env.example)}
+    volumes:
+      - ./db:/db:ro
+    restart: "no"
+
+  sites:
+    build: ./services/sites
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      PORT: "8000"
+      DATABASE_URL: mssql://sites_user:${SITES_DB_PASSWORD}@sqlserver:1433/sites
+      CORS_ORIGIN: http://localhost:8080
+    ports:
+      - "8001:8000"
+
+  dives:
+    build: ./services/dives
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      PORT: "8000"
+      DATABASE_URL: mssql://dives_user:${DIVES_DB_PASSWORD}@sqlserver:1433/dives
+      SECRET_KEY: ${SECRET_KEY:?set it in .env (see .env.example)}
+      SITES_URL: http://sites:8000
+      SITES_TIMEOUT_S: "2"
+      CORS_ORIGIN: http://localhost:8080
+    ports:
+      - "8000:8000"
+
+  # The static UI, served as plain files by a stock web server (no Dockerfile, and not
+  # one of the two service containers). The browser then calls dives and sites itself.
+  ui:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./ui:/usr/share/nginx/html:ro
+    ports:
+      - "8080:80"
+
+volumes:
+  sqlserver-data:

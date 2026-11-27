@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Be the Fish</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</head>
+<body>
+<header class="site-header" id="nav"></header>
+<main class="container">
+    <section class="hero">
+        <h1 id="welcome">Your dives, all in one log</h1>
+        <p>A logbook for scuba divers, freedivers and spearfishers. Import dives from your dive computer
+           or log them by hand, tag the site and conditions, and share them with friends.</p>
+        <div class="page-actions" id="actions"></div>
+    </section>
+    <div class="feature-grid">
+        <div class="card"><span class="card-title">Every discipline</span><br><span class="card-meta">Scuba dives, freedive sessions with each descent, and spearfishing catches.</span></div>
+        <div class="card"><span class="card-title">Import from your watch</span><br><span class="card-meta">Upload a Subsurface CSV export. Re-importing never makes duplicates.</span></div>
+        <div class="card"><span class="card-title">Share if you want</span><br><span class="card-meta">Each dive is private, friends-only or public. Friends can give kudos and comment.</span></div>
+    </div>
+</main>
+<script>
+    renderNav();
+    if (getToken()) {
+        document.getElementById("welcome").textContent =
+            "Welcome back, " + localStorage.getItem("userName");
+        document.getElementById("actions").innerHTML =
+            '<a class="button" href="new.html">Log a dive</a>' +
+            '<a class="button secondary" href="feed.html">Open the feed</a>';
+    } else {
+        document.getElementById("actions").innerHTML =
+            '<a class="button" href="login.html">Log in or create an account</a>';
+    }
+</script>
+</body>
+</html>

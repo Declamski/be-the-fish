@@ -1,9 +1,17 @@
-CLAUDE.md
-docs/
+# Local-only notes and course material
 notes_from_AI.md
 dev_notes_for_report.md
+docs/*.pdf
+docs/a1/
 
-# Runtime data
+# Secrets (never commit — see CLAUDE.md rule 6)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Runtime data (matches inside services/*/ too)
 data/
 imports/
 
@@ -13,7 +21,9 @@ __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
+.ruff_cache/
 .coverage
+coverage.xml
 htmlcov/
 
 # OS

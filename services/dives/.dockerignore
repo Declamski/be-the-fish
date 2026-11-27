@@ -1,0 +1,3 @@
+# Never send these to the Docker build.
+.venv/
+**/__pycache__/

@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dive - Be the Fish</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</head>
+<body>
+<header class="site-header" id="nav"></header>
+<main class="container">
+    <p id="error" class="error" hidden></p>
+    <div id="dive"><p class="muted">Loading…</p></div>
+
+    <div id="catches-section" hidden>
+        <h2>Catches</h2>
+        <ul id="catch-list" class="card-list"></ul>
+        <form id="catch-form" class="form" hidden>
+            <label>Species <input type="text" name="species" required></label>
+            <label>Weight (kg) <input type="number" step="0.1" min="0" name="weight_kg"></label>
+            <button type="submit">Add catch</button>
+        </form>
+    </div>
+
+    <h2>Kudos</h2>
+    <div class="row" id="kudos"></div>
+    <h2>Comments</h2>
+    <ul id="comment-list" class="card-list"></ul>
+    <form id="comment-form" class="form">
+        <label>Add a comment <textarea name="body" maxlength="500" required></textarea></label>
+        <span class="hint">Up to 500 characters.</span>
+        <button type="submit">Post comment</button>
+    </form>
+
+    <div id="owner-section" hidden>
+        <h2>Edit this dive</h2>
+        <form id="audience-form" class="form">
+            <fieldset>
+                <legend>Who can see this dive</legend>
+                <label>Audience <select name="audience" id="audience-select"></select></label>
+                <button type="submit" class="secondary">Save audience</button>
+            </fieldset>
+        </form>
+        <form id="site-form" class="form">
+            <fieldset>
+                <legend>Site and conditions</legend>
+                <label>Site <select name="site_id" id="site-select"></select></label>
+                <span class="hint" id="site-note"></span>
+                <label>Visibility <select name="visibility" id="visibility-select"></select></label>
+                <label>Current <select name="current" id="current-select"></select></label>
+                <button type="submit" class="secondary">Save site and conditions</button>
+            </fieldset>
+        </form>
+    </div>
+</main>
+<script>
+    requireLogin();
+    renderNav();
+    const diveId = getParam("id");
+
+    // --- The dive itself (from the dives service) ---
+
+    async function loadDive() {
+        let detail;
+        try {
+            detail = await api("dives", "GET", "/api/dives/" + diveId);
+        } catch (error) {
+            document.getElementById("dive").innerHTML = "";
+            showError(error.message);
+            return;
+        }
+        const dive = detail.dive;
+
+        // The site's name comes from the dives service, which asked the sites service.
+        let site = '<span class="muted">No site</span>';
+        if (detail.site_label) {
+            site = '<a href="site.html?id=' + dive.site_id + '">' + escapeHtml(detail.site_label) + '</a>';
+        } else if (detail.site_unavailable) {
+            site = '<span class="muted">Site unavailable</span>';
+        }
+        let who = "Logged by " + escapeHtml(detail.owner_name);
+        if (detail.is_owner) {
+            who = "Your dive &middot; " + escapeHtml(dive.audience);
+        }
+
+        let html = '<p class="card-meta">' + who + '</p>' +
+            '<h1>' + escapeHtml(formatDateTime(dive.started_at)) + '</h1>' +
+            '<p><span class="badge">' + escapeHtml(dive.discipline) + '</span> ' + site + '</p>' +
+            '<div class="card"><div class="stats">' +
+            stat("Max depth", formatNumber(dive.max_depth_m, "m")) +
+            stat(detail.descents.length > 0 ? "Total time" : "Time", formatDuration(dive.duration_s)) +
+            stat("Water", formatNumber(dive.water_temp_c, "°C")) +
+            stat("Visibility", dive.visibility || "-") +
+            stat("Current", dive.current_level || "-") +
+            '</div>' + (dive.notes ? '<p>' + escapeHtml(dive.notes) + '</p>' : '') + '</div>';
+
+        if (detail.descents.length > 0) {
+            html += '<h2>Descents</h2><ul class="card-list">';
+            detail.descents.forEach(function (descent, index) {
+                html += '<li class="card"><span class="card-title">Descent ' + (index + 1) + '</span>' +
+                    '<div class="stats">' + stat("Depth", formatNumber(descent.depth_m, "m")) +
+                    stat("Time", formatDuration(descent.duration_s)) + '</div></li>';
+            });
+            html += '</ul>';
+        }
+        document.getElementById("dive").innerHTML = html;
+
+        if (dive.discipline === "spearfishing") {
+            showCatches(detail.catches, detail.is_owner);
+        }
+        if (detail.is_owner) {
+            showOwnerForms(dive);
+        }
+    }
+
+    function showCatches(catches, isOwner) {
+        document.getElementById("catches-section").hidden = false;
+        document.getElementById("catch-form").hidden = !isOwner;
+        let html = "";
+        for (const fish of catches) {
+            html += '<li class="card"><span class="card-title">' + escapeHtml(fish.species) + '</span> ' +
+                (fish.weight_kg !== null ? '<span class="muted">' + formatNumber(fish.weight_kg, "kg") + '</span>' : '') + '</li>';
+        }
+        document.getElementById("catch-list").innerHTML = html || '<li class="card muted">No catches logged yet.</li>';
+    }
+
+    async function showOwnerForms(dive) {
+        document.getElementById("owner-section").hidden = false;
+        const options = await api("dives", "GET", "/api/dives/options");
+        fillSelect(document.getElementById("audience-select"), options.audiences, dive.audience);
+        fillSelect(document.getElementById("visibility-select"), options.visibility_levels, dive.visibility, "Not recorded");
+        fillSelect(document.getElementById("current-select"), options.current_levels, dive.current_level, "Not recorded");
+        fillSiteSelect(document.getElementById("site-select"), dive.site_id, document.getElementById("site-note"));
+    }
+
+    // --- Kudos and comments (from the feed part of the dives service) ---
+
+    async function loadSocial() {
+        let social;
+        try {
+            social = await api("dives", "GET", "/api/feed/dives/" + diveId + "/social");
+        } catch (error) {
+            return;  // loadDive already shows the error
+        }
+        let kudos = '<span><span class="stat-value">' + social.kudos_count + '</span> kudos</span>';
+        if (social.can_give_kudos && social.viewer_gave_kudos) {
+            kudos += '<button type="button" class="secondary" onclick="changeKudos(\'DELETE\')">Take back kudos</button>';
+        } else if (social.can_give_kudos) {
+            kudos += '<button type="button" onclick="changeKudos(\'POST\')">Give kudos</button>';
+        }
+        document.getElementById("kudos").innerHTML = kudos;
+
+        let comments = "";
+        for (const comment of social.comments) {
+            comments += '<li class="card"><div class="row"><span class="card-meta"><strong>' +
+                escapeHtml(comment.author_name) + '</strong> &middot; ' + escapeHtml(formatDateTime(comment.created_at)) + '</span>' +
+                (comment.is_author ? '<button type="button" class="secondary" onclick="deleteComment(' + comment.id + ')">Delete</button>' : '') +
+                '</div><p>' + escapeHtml(comment.body) + '</p></li>';
+        }
+        document.getElementById("comment-list").innerHTML = comments || '<li class="card muted">No comments yet.</li>';
+    }
+
+    // Run a change (a POST/PUT/DELETE), then reload the page's data, or show the error.
+    async function change(method, path, body, reload) {
+        showError("");
+        try {
+            await api("dives", method, path, body);
+            reload();
+        } catch (error) {
+            showError(error.message);
+        }
+    }
+
+    function changeKudos(method) {
+        change(method, "/api/feed/dives/" + diveId + "/kudos", undefined, loadSocial);
+    }
+
+    function deleteComment(commentId) {
+        change("DELETE", "/api/feed/comments/" + commentId, undefined, loadSocial);
+    }
+
+    // The form's fields as an object, e.g. {"species": "Grouper", "weight_kg": "2.5"}.
+    function formFields(form) {
+        return Object.fromEntries(new FormData(form));
+    }
+
+    document.getElementById("comment-form").addEventListener("submit", function (event) {
+        event.preventDefault();
+        change("POST", "/api/feed/dives/" + diveId + "/comments", formFields(event.target), function () {
+            event.target.reset();
+            loadSocial();
+        });
+    });
+    document.getElementById("catch-form").addEventListener("submit", function (event) {
+        event.preventDefault();
+        change("POST", "/api/dives/" + diveId + "/catches", formFields(event.target), loadDive);
+    });
+    document.getElementById("audience-form").addEventListener("submit", function (event) {
+        event.preventDefault();
+        change("PUT", "/api/dives/" + diveId + "/audience", formFields(event.target), loadDive);
+    });
+    document.getElementById("site-form").addEventListener("submit", function (event) {
+        event.preventDefault();
+        change("PUT", "/api/dives/" + diveId + "/site", formFields(event.target), loadDive);
+    });
+
+    loadDive();
+    loadSocial();
+</script>
+</body>
+</html>

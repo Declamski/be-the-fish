@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Log in - Be the Fish</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</head>
+<body>
+<header class="site-header" id="nav"></header>
+<main class="container">
+    <p id="error" class="error" hidden></p>
+
+    <h1>Log in</h1>
+    <form id="login-form" class="form">
+        <label>Email <input type="email" name="email" required autocomplete="email"></label>
+        <label>Password <input type="password" name="password" required autocomplete="current-password"></label>
+        <button type="submit">Log in</button>
+    </form>
+
+    <h2>New here? Create an account</h2>
+    <form id="signup-form" class="form">
+        <label>Email <input type="email" name="email" required autocomplete="email"></label>
+        <label>Name <input type="text" name="name" required autocomplete="name"></label>
+        <span class="hint">This is what friends see and search for.</span>
+        <label>Password <input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
+        <span class="hint">At least 8 characters.</span>
+        <button type="submit">Create account</button>
+    </form>
+</main>
+<script>
+    renderNav();
+
+    // Both forms do the same thing: send the fields, keep the token, go to the feed.
+    async function sendForm(event, path) {
+        event.preventDefault();
+        showError("");
+        const fields = Object.fromEntries(new FormData(event.target));
+        try {
+            const result = await api("dives", "POST", path, fields);
+            saveLogin(result.token, result.user);
+            window.location.href = "feed.html";
+        } catch (error) {
+            showError(error.message);
+        }
+    }
+
+    document.getElementById("login-form").addEventListener("submit", function (event) {
+        sendForm(event, "/api/login");
+    });
+    document.getElementById("signup-form").addEventListener("submit", function (event) {
+        sendForm(event, "/api/signup");
+    });
+</script>
+</body>
+</html>

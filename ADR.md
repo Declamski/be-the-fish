@@ -47,3 +47,55 @@
 * **Decision:** Although I originally wanted to connect devices directly to upload dive logs I ended up going down a different path. I allowed for 2 means of data imports, manual entry and importing csv files. This allows for logs to be entered without going directly through an external device.
 * **Alternatives considered:** Allowing direct communication with a dive computer. I could have spent time trying to implement this as a feature but I realised that it was out of my current scope as I'm without hardware to test the direct access. I could have looked into making a mock connection a different way but I decided it would be eating time that I could use on other things.
 * **Consequences:** Not having this feature is a big hit because it adds a big user experience addition for users. It is definitely something I would like to implement as I move forward with the project and have access to what's required to make it happen.
+
+---
+
+## 6. The split
+* **Date:** 2026-11-19
+* **Status:** Decided
+* **Context:** Assignment 2 requires the monolith to be split into separate services along the seam from ADR-2, each in its own container with its own database, with a maximum of two service containers. In Assignment 1 I had three domains (dives, sites and feed), so not every domain could become its own service.
+* **Decision:** I split the app into two services: `services/dives`, which holds dives, feed and users/login, and `services/sites`, which holds the dive site catalogue. The seam between dives and sites from ADR-2 held, and the only thing that crosses it is dives calling sites over HTTP (`site_exists`, `search_sites` and `get_site_label` in `dives/sites_client.py`), found through `SITES_URL` and with a timeout on every call. Feed did not get its own service because of the two container maximum, so it was put inside dives, but it is still its own package and never touches the dives repository.
+* **Alternatives considered:** Putting feed and users in the second service and moving sites into dives: feed needs dives for almost everything it does (every feed page, kudos and comment checks the dive), so this would have meant many calls across the seam, while dives only needs sites when a site is picked or shown. Making users/login its own service: it would need a third container, which isn't allowed, and every request would have to call it. Having the UI call both services and join the data in the browser: at least one flow has to cross on the server, and checking that a site exists has to happen on the server anyway, otherwise someone could save a dive with a made up site.
+* **Consequences:** Dive pages now depend on a network call to sites, so if sites is slow or down it affects dives, which is why every call has a timeout. `site_id` is now just a number with no foreign key, so it is only checked when a dive is saved, and some files (`db.py`, `migrate.py`, `config.py`) are copied into both services. In return each service can be deployed and fail on its own, and because feed kept its own package it could be split out into a third service later without restructuring it.
+
+---
+
+## 7. Data and migrations
+* **Date:** 2026-11-19
+* **Status:** Decided
+* **Context:** In Assignment 1 all tables were in one SQLite file and were created with `CREATE TABLE IF NOT EXISTS` on start. Assignment 2 needs one SQL Server database per service and a schema that can change while the database already holds data, so tables can't just be recreated anymore.
+* **Decision:** Each service has its own numbered SQL files in `migrations/` that `migrate.py` runs in order at startup, each one exactly once, and records in a `schema_migrations` table. The A1 tables were split by owner: users, friendships, dives, descents, catches, kudos and comments went into `dives`' `001_init.sql`, and sites went into `sites`' `001_init.sql`. No rows had to be moved because the A1 app was never deployed, so both Azure databases start empty and get their data through the app. If a migration goes wrong in production I fix it forward with a new migration, and only if data was actually lost or damaged I use Azure's point-in-time restore to go back to before the deploy.
+* **Alternatives considered:** Alembic: it would track migrations for me, but it brings in SQLAlchemy and a tool I would have to learn and explain, when my runner is one small file. Down migrations for every change: the brief allows forward only and writing an undo for each file doubles the work for something I would rarely use. Always restoring from backup: it throws away everything written after the backup, so it's only worth it when data is already damaged.
+* **Consequences:** `dives.site_id` can't be a foreign key anymore because sites live in another database, so the site is only checked through the sites API when a dive is saved; this is safe because sites are read-only and never deleted. Feed's kudos and comments still point at dives with plain ids like in A1. A migration that fails stops the service from starting instead of running half-applied, and because applied files are never edited, every database can always be rebuilt by running the same files in order.
+
+---
+
+## 8. Serverless hosting on Azure
+* **Date:** 2026-11-27
+* **Status:** Decided
+* **Context:** The system runs on my own Azure for Students subscription and should cost nothing while nobody uses it, so nothing can be always on.
+* **Decision:** Both services run as Container Apps (Consumption) with min 0 and max 1 replicas, each has its own serverless Azure SQL database (0.5 to 1 vCore, max 2 GB, pauses after 60 minutes idle), the UI is a Storage static website and the images are on GHCR. I wanted the free SQL offer, but on my subscription italynorth and switzerlandnorth refuse new SQL servers and belgiumcentral and austriaeast don't support free databases, so the SQL server and Container Apps are in austriaeast on the brief's serverless settings and only the UI storage is in italynorth. I set it up once with Azure CLI commands written in the README, and after that only the CD workflow changes anything. To handle a cold start, `db.py` retries the connection for about a minute while a paused database resumes, and the UI tells the user to try again in a moment.
+* **Alternatives considered:** Bicep or Terraform: another language to learn for a setup that only runs once. One replica always on and no database pause: no waiting, but it costs money even with no users. Retrying automatically in the UI: nicer, but more code when a clear message does the job.
+* **Consequences:** The first request after an idle hour can take up to a minute. Migrations run at startup, which is only safe with one replica, so at 100x the traffic I would raise max replicas and move the migrations into a deploy step so they run once. The databases are paid for only while they are awake, so at 100x they would rarely pause and cost more, and I would raise their max vCores.
+
+---
+
+## 9. Pipeline and testing
+<!-- Brief: what CI gates on and why, how the cross-seam test works, what is deliberately not tested. -->
+* **Date:** 
+* **Status:** Decided
+* **Context:** 
+* **Decision:** 
+* **Alternatives considered:** 
+* **Consequences:** 
+
+---
+
+## 10. What is deliberately not built
+<!-- Brief: one thing deliberately not built (from section 1c or elsewhere) and the conditions under which it would be worth building. -->
+* **Date:** 
+* **Status:** Decided
+* **Context:** 
+* **Decision:** 
+* **Alternatives considered:** 
+* **Consequences:** 

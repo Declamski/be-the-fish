@@ -1,6 +1,0 @@
-CREATE TABLE IF NOT EXISTS sites (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    location TEXT NOT NULL,
-    description TEXT
-);
