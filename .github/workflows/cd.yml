@@ -1,0 +1,160 @@
+# CD: on every push to main, run CI on this commit first, and only if it passes push the
+# images to GHCR, deploy both services to Azure Container Apps, upload the UI to the
+# storage static website, and check that the new version answers /health.
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+# Two deploys must never run at the same time: a second push to main waits for the first.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # The whole CI workflow (lint, tests, coverage, validation, image builds) on this commit.
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write   # push images to GHCR with the built-in GITHUB_TOKEN
+      id-token: write   # ask GitHub for the OIDC token that azure/login trades for Azure access
+    env:
+      RG: ${{ vars.RESOURCE_GROUP }}
+      PREFIX: ${{ vars.PREFIX }}
+      UI_STORAGE: ${{ vars.UI_STORAGE }}
+      DIVES_IMAGE: ghcr.io/declamski/be-the-fish-dives:${{ github.sha }}
+      SITES_IMAGE: ghcr.io/declamski/be-the-fish-sites:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- 1. Images, tagged with the commit SHA ---
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # provenance: false gives a plain image, which Container Apps can pull.
+      - name: Build and push the dives image
+        uses: docker/build-push-action@v6
+        with:
+          context: services/dives
+          push: true
+          provenance: false
+          tags: ${{ env.DIVES_IMAGE }}
+
+      - name: Build and push the sites image
+        uses: docker/build-push-action@v6
+        with:
+          context: services/sites
+          push: true
+          provenance: false
+          tags: ${{ env.SITES_IMAGE }}
+
+      # --- 2. Azure ---
+
+      # OIDC: no Azure password is stored, only the ids of the managed identity.
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Look up the addresses instead of writing them into the repo.
+      # CORS_ORIGIN must not end with a slash, the browser's Origin header never does.
+      - name: Find the URLs
+        run: |
+          UI_URL=$(az storage account show --name "$UI_STORAGE" --resource-group "$RG" \
+            --query primaryEndpoints.web -o tsv)
+          DIVES_FQDN=$(az containerapp show --name "$PREFIX-dives" --resource-group "$RG" \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          SITES_FQDN=$(az containerapp show --name "$PREFIX-sites" --resource-group "$RG" \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          echo "CORS_ORIGIN=${UI_URL%/}" >> "$GITHUB_ENV"
+          echo "DIVES_URL=https://$DIVES_FQDN" >> "$GITHUB_ENV"
+          echo "SITES_URL=https://$SITES_FQDN" >> "$GITHUB_ENV"
+
+      # Sites first, because dives calls it. The connection string goes in as a Container
+      # Apps secret and the env var only points at it (secretref), never the plain value.
+      # Secrets reach the script as env vars; GitHub hides their values in the logs.
+      - name: Deploy sites
+        env:
+          DB_PASSWORD: ${{ secrets.SITES_DB_PASSWORD }}
+        run: |
+          SQL_HOST="$PREFIX-sql.database.windows.net"
+          az containerapp secret set --name "$PREFIX-sites" --resource-group "$RG" \
+            --secrets "database-url=mssql://sites_user:$DB_PASSWORD@$SQL_HOST:1433/$PREFIX-sites-db" \
+            --output none
+          az containerapp update --name "$PREFIX-sites" --resource-group "$RG" \
+            --image "$SITES_IMAGE" \
+            --set-env-vars "DATABASE_URL=secretref:database-url" "VERSION=${{ github.sha }}" \
+              "CORS_ORIGIN=$CORS_ORIGIN" \
+            --output none
+
+      - name: Deploy dives
+        env:
+          DB_PASSWORD: ${{ secrets.DIVES_DB_PASSWORD }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        run: |
+          SQL_HOST="$PREFIX-sql.database.windows.net"
+          az containerapp secret set --name "$PREFIX-dives" --resource-group "$RG" \
+            --secrets "database-url=mssql://dives_user:$DB_PASSWORD@$SQL_HOST:1433/$PREFIX-dives-db" \
+              "secret-key=$SECRET_KEY" \
+            --output none
+          az containerapp update --name "$PREFIX-dives" --resource-group "$RG" \
+            --image "$DIVES_IMAGE" \
+            --set-env-vars "DATABASE_URL=secretref:database-url" "SECRET_KEY=secretref:secret-key" \
+              "VERSION=${{ github.sha }}" "CORS_ORIGIN=$CORS_ORIGIN" "SITES_URL=$SITES_URL" \
+            --output none
+
+      # The UI gets the Azure addresses of both services in a config.js written here.
+      # --auth-mode login uses the identity's "Storage Blob Data Contributor" role, no key.
+      - name: Upload the UI
+        run: |
+          cat > ui/config.js <<EOF
+          // Written by the CD workflow for commit ${{ github.sha }}.
+          window.CONFIG = {
+              DIVES_URL: "$DIVES_URL",
+              SITES_URL: "$SITES_URL",
+          };
+          EOF
+          az storage blob upload-batch --account-name "$UI_STORAGE" --destination '$web' \
+            --source ui --overwrite --auth-mode login --output none
+
+      # --- 3. Check the deploy ---
+
+      # A cold start, a paused database resuming (~1 min) and the migrations all have to
+      # fit in 5 minutes. A 200 is not enough: "version" must be this commit, so we know the
+      # new revision answered and not the old one.
+      - name: Check /health on both services
+        run: |
+          for url in "$SITES_URL" "$DIVES_URL"; do
+            ok=no
+            for i in $(seq 1 30); do
+              body=$(curl -s --max-time 10 "$url/health" || true)
+              echo "$url/health -> $body"
+              if [ "$(echo "$body" | jq -r '.status' 2>/dev/null)" = "ok" ] && \
+                 [ "$(echo "$body" | jq -r '.version' 2>/dev/null)" = "${{ github.sha }}" ]; then
+                ok=yes
+                break
+              fi
+              sleep 10
+            done
+            if [ "$ok" != "yes" ]; then
+              echo "$url did not report healthy version ${{ github.sha }} within 5 minutes"
+              exit 1
+            fi
+          done
+          echo "Both services are healthy at ${{ github.sha }}. UI: $CORS_ORIGIN"
