@@ -161,6 +161,12 @@ PRINCIPAL_ID=$(az identity show --name $PREFIX-github --resource-group $RG --que
 RG_ID=$(az group show --name $RG --query id -o tsv)
 az role assignment create --assignee-object-id $PRINCIPAL_ID \
   --assignee-principal-type ServicePrincipal --role Contributor --scope $RG_ID
+# Contributor manages resources but cannot write the files inside storage. This role lets the
+# pipeline upload ui/ to $web with its own login (no storage key), on the UI account only.
+UI_STORAGE_ID=$(az storage account show --name $UI_STORAGE --resource-group $RG --query id -o tsv)
+az role assignment create --assignee-object-id $PRINCIPAL_ID \
+  --assignee-principal-type ServicePrincipal --role "Storage Blob Data Contributor" \
+  --scope $UI_STORAGE_ID
 # GitHub may send the subject with names or with numeric ids, so both are registered.
 az identity federated-credential create --name github-main --identity-name $PREFIX-github \
   --resource-group $RG --issuer https://token.actions.githubusercontent.com \

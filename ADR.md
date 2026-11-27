@@ -71,13 +71,12 @@
 ---
 
 ## 8. Serverless hosting on Azure
-<!-- Brief: Azure resources used and their cost model; scale-to-zero consequences for containers and database (cold starts, DB resuming from pause, connection retries, migrations at startup with one replica); changes needed at 100x traffic. -->
-* **Date:** 
+* **Date:** 2026-11-27
 * **Status:** Decided
-* **Context:** 
-* **Decision:** 
-* **Alternatives considered:** 
-* **Consequences:** 
+* **Context:** The system runs on my own Azure for Students subscription and should cost nothing while nobody uses it, so nothing can be always on.
+* **Decision:** Both services run as Container Apps (Consumption) with min 0 and max 1 replicas, each has its own serverless Azure SQL database (0.5 to 1 vCore, max 2 GB, pauses after 60 minutes idle), the UI is a Storage static website and the images are on GHCR. I wanted the free SQL offer, but on my subscription italynorth and switzerlandnorth refuse new SQL servers and belgiumcentral and austriaeast don't support free databases, so the SQL server and Container Apps are in austriaeast on the brief's serverless settings and only the UI storage is in italynorth. I set it up once with Azure CLI commands written in the README, and after that only the CD workflow changes anything. To handle a cold start, `db.py` retries the connection for about a minute while a paused database resumes, and the UI tells the user to try again in a moment.
+* **Alternatives considered:** Bicep or Terraform: another language to learn for a setup that only runs once. One replica always on and no database pause: no waiting, but it costs money even with no users. Retrying automatically in the UI: nicer, but more code when a clear message does the job.
+* **Consequences:** The first request after an idle hour can take up to a minute. Migrations run at startup, which is only safe with one replica, so at 100x the traffic I would raise max replicas and move the migrations into a deploy step so they run once. The databases are paid for only while they are awake, so at 100x they would rarely pause and cost more, and I would raise their max vCores.
 
 ---
 
