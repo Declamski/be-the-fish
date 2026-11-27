@@ -107,7 +107,7 @@ Each service folder will hold: its package(s), `app.py`, `config.py`, `db.py`,
 `migrations/NNN_name.sql`, `tests/`, `Dockerfile`, `openapi.yaml`, `pyproject.toml`, `uv.lock`.
 
 - **The seam:** the only cross-service flow is **dives → sites over HTTP**
-  (`site_exists`, `search_sites`, `get_site_label`). Sites never calls dives.
+  (`site_exists`, `get_site_label`, both through `GET /api/sites/<id>`). Sites never calls dives.
   Located via `SITES_URL`; **every outbound call has a timeout** (`SITES_TIMEOUT_S`).
 - **Partial failure:** if sites is down, dive pages still work and show "site unavailable";
   creating/editing a dive with a site returns a clear error. Never a stack trace or a hang.

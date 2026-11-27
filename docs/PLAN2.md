@@ -22,7 +22,7 @@ Deadline **Sun 2026-11-29 23:59 (Madrid)** (moved from 22 Nov). Work on branch `
 
 ## Decided (student)
 - 2 containers: `services/dives` (dives + feed + users/auth) and `services/sites` (sites only).
-- Only cross-seam flow: dives → sites over HTTP (`site_exists`, `search_sites`, `get_site_label`),
+- Only cross-seam flow: dives → sites over HTTP (`site_exists`, `get_site_label`; `search_sites` deleted 27 Nov),
   via `SITES_URL`, every call with a timeout.
 - Sites down → dive pages still work with "site unavailable"; creating a dive with a site
   returns a clear error.
@@ -120,3 +120,7 @@ Deadline **Sun 2026-11-29 23:59 (Madrid)** (moved from 22 Nov). Work on branch `
   `build` both images. Ruff findings fixed (no behaviour change). Local run: dives 88%, sites 95%.
   ADR-8 drafted (uncommitted) — waiting for the Azure thread to settle the SQL region before committing.
 
+- 2026-11-26: first CI run on GitHub green (all 5 jobs). Tomorrow (Fri 27): dead code decision
+  (`get_site_choices`, `sites_client.search_sites`), `cd.yml` + first deploy. ADR-8 still being worked on.
+- 2026-11-27: dead code deleted: `dives.service.get_site_choices` and `sites_client.search_sites`
+  (no caller since the UI fills the site dropdown from sites itself) + their 3 tests. Dives 132 tests, 86%.

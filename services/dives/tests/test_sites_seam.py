@@ -37,10 +37,7 @@ class FakeSitesHandler(http.server.BaseHTTPRequestHandler):
         if self.server.mode == "error":
             self.send_json(500, {"error": "Something broke"})
             return
-        path = self.path.split("?")[0]
-        if path == "/api/sites":
-            self.send_json(200, [FAKE_SITE])
-        elif path == "/api/sites/1":
+        if self.path == "/api/sites/1":
             self.send_json(200, FAKE_SITE)
         else:
             self.send_json(404, {"error": "Site not found"})
@@ -89,11 +86,6 @@ def server_url(server):
 
 # --- sites_client against the fake server ---
 
-def test_search_sites_over_http(fake_sites_server):
-    with point_dives_at(server_url(fake_sites_server)):
-        assert sites_client.search_sites("blue") == [FAKE_SITE]
-
-
 def test_get_site_label_over_http(fake_sites_server):
     with point_dives_at(server_url(fake_sites_server)):
         assert sites_client.get_site_label(1) == "Blue Hole - Gozo, Malta"
@@ -125,7 +117,7 @@ def test_slow_sites_times_out(fake_sites_server):
 def test_sites_down_is_unavailable():
     with point_dives_at(NOTHING_LISTENING_URL), \
             pytest.raises(sites_client.SitesUnavailable):
-        sites_client.search_sites("")
+        sites_client.get_site(1)
 
 
 # --- what the dives service does when sites is down (needs the test database) ---
@@ -163,10 +155,6 @@ def test_dive_with_site_gives_clear_error_when_sites_down(conn, sites_down):
             duration_s=100, site_id=1,
         )
     assert str(error.value) == service.SITES_DOWN_MESSAGE
-
-
-def test_site_choices_are_none_when_sites_down(conn, sites_down):
-    assert service.get_site_choices(conn) is None
 
 
 def test_feed_still_works_when_sites_down(conn, sites_down):

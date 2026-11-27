@@ -1,5 +1,4 @@
 import pytest
-from conftest import FAKE_SITES
 
 import users
 from dives import service
@@ -243,14 +242,6 @@ def test_set_dive_site_and_conditions_rejects_unknown_site(conn):
         service.set_dive_site_and_conditions(
             conn, dive_id, user_id=1, site_id=9999, visibility=None, current=None,
         )
-
-
-def test_get_site_choices_lists_every_site_with_label(conn):
-    choices = service.get_site_choices(conn)
-    labels = [choice["label"] for choice in choices]
-    assert "Blue Hole - Dahab, Egypt" in labels
-    assert "Blue Hole - Gozo, Malta" in labels
-    assert len(choices) == len(FAKE_SITES)
 
 
 # --- audience: who can see a dive ---

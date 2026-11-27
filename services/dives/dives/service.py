@@ -177,22 +177,6 @@ def list_dives(conn, user_id):
     return repository.list_dives_for_user(conn, user_id)
 
 
-def get_site_choices(conn):
-    """Every dive site as {"id", "label"}, for the site dropdown on the dive forms.
-
-    Returns None if the sites service is unavailable, so the form can say so.
-    """
-    try:
-        # One HTTP call for the whole list; each site already comes with its label.
-        sites = sites_client.search_sites("")
-    except sites_client.SitesUnavailable:
-        return None
-    choices = []
-    for site in sites:
-        choices.append({"id": site["id"], "label": site["label"]})
-    return choices
-
-
 def get_dive_detail(conn, dive_id, viewer_id):
     """Everything the dive page shows. Other people may view it if the audience allows."""
     dive = repository.get_dive(conn, dive_id)

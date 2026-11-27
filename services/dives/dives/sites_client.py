@@ -6,7 +6,6 @@ call gives up after SITES_TIMEOUT_S seconds.
 """
 import json
 import urllib.error
-import urllib.parse
 import urllib.request
 
 import flask
@@ -37,11 +36,6 @@ def get_json(path):
         # ValueError: the answer was not valid JSON.
         print("Sites unavailable:", path, e, flush=True)
         raise SitesUnavailable(str(e)) from e
-
-
-def search_sites(query):
-    """Sites whose name or location contains `query`. Each has id, name, location, description, label."""
-    return get_json("/api/sites?" + urllib.parse.urlencode({"q": query}))
 
 
 def get_site(site_id):

@@ -69,12 +69,8 @@ FAKE_SITES = {
 
 @pytest.fixture(autouse=True)
 def fake_sites(monkeypatch):
-    """Replace the two HTTP calls in sites_client with lookups in FAKE_SITES."""
+    """Replace the HTTP call in sites_client with a lookup in FAKE_SITES."""
     def fake_get_site(site_id):
         return FAKE_SITES.get(site_id)
 
-    def fake_search_sites(query):
-        return list(FAKE_SITES.values())
-
     monkeypatch.setattr(sites_client, "get_site", fake_get_site)
-    monkeypatch.setattr(sites_client, "search_sites", fake_search_sites)
